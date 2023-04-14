@@ -2,7 +2,6 @@ input-files: ['test/input-plantuml.md']
 filters:
   - diagram.lua
 to: html
-self-contained: true
 metadata:
   pagetitle: plantuml diagram
 variables:
