@@ -3,7 +3,7 @@ PANDOC ?= pandoc
 DIFF ?= diff
 
 .PHONY: test
-test: test-plantuml test-tikz
+test: test-plantuml test-tikz test-dot
 
 test-%: test/test-%.yaml test/input-%.md $(FILTER_FILE)
 	@$(PANDOC) --defaults test/test-$*.yaml | \
