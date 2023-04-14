@@ -1,17 +1,20 @@
-# Diagram Generator Lua Filter
+# Diagram Generator
 
-## Introduction
-This Lua filter is used to create images with or without captions from code
-blocks. Currently PlantUML, Graphviz, Ti*k*Z and Python can be processed.
-This document also serves as a test document, which is why the subsequent
-test diagrams are integrated in every supported language.
+This Lua filter is used to create images with or without captions
+from code blocks. Currently PlantUML, Graphviz, Ti*k*Z and Python
+can be processed. This document also serves as a test document,
+which is why the subsequent test diagrams are integrated in every
+supported language.
 
 ## Prerequisites
-To be able to use this Lua filter, the respective external tools must be
-installed. However, it is sufficient if the tools to be used are installed.
-If you only want to use PlantUML, you don't need LaTeX or Python, etc.
+
+To be able to use this Lua filter, the respective external tools
+must be installed. However, it is sufficient if the tools to be
+used are installed. If you only want to use PlantUML, you don't
+need LaTeX or Python, etc.
 
 ### PlantUML
+
 To use PlantUML, you must install PlantUML itself. See the
 [PlantUML website](http://plantuml.com/) for more details. It should be
 noted that PlantUML is a Java program and therefore Java must also
@@ -167,7 +170,7 @@ plt.savefig("$DESTINATION$", dpi=300, format="$FORMAT$")
 The placeholder `$FORMAT$` gets replace by the necessary format. Most of the
 time, this will be `png` or `svg`. The second placeholder, `$DESTINATION$`
 gets replaced by the path and file name of the destination. Both placeholders
-can be used as many times as you want. Example usage from the [Matplotlib 
+can be used as many times as you want. Example usage from the [Matplotlib
 examples](https://matplotlib.org/gallery/lines_bars_and_markers/cohere.html#sphx-glr-gallery-lines-bars-and-markers-cohere-py):
 
 ~~~~~~~~~~~~~~~~
@@ -228,7 +231,7 @@ system.
 Command to use PlantUML (a single line):
 
 ```
-pandoc.exe README.md -f markdown -t docx --self-contained --standalone --lua-filter=filters\diagram-generator.lua --metadata=plantumlPath:"c:\ProgramData\chocolatey\lib\plantuml\tools\plantuml.jar" --metadata=javaPath:"c:\Program Files\Java\jre1.8.0_201\bin\java.exe" -o README.docx
+pandoc.exe README.md -f markdown -t docx --self-contained --standalone --lua-filter=filters\diagram.lua --metadata=plantumlPath:"c:\ProgramData\chocolatey\lib\plantuml\tools\plantuml.jar" --metadata=javaPath:"c:\Program Files\Java\jre1.8.0_201\bin\java.exe" -o README.docx
 ```
 
 All available environment variables:
