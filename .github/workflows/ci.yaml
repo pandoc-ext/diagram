@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  # Run on all pull requests that change code.
+  pull_request:
+    paths-ignore:
+      - 'README.md'
+      - LICENSE
+      - .editorconfig
+  # Run every time a code change is pushed.
+  push:
+    paths-ignore:
+      - 'README.md'
+      - LICENSE
+      - .editorconfig
+  # Test if things still work each Tuesday morning.
+  # This way we will catch incompatible pandoc changes in a timely
+  # manner.
+  schedule:
+    # At 4:27am each Tuesday
+    - cron: '27 4 * * 2'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        pandoc:
+          - edge
+          - latest
+          # The oldest version that's guaranteed to be supported
+          - '3.0'
+
+    container:
+      image: pandoc/core:${{ matrix.pandoc }}-ubuntu
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          apt-get -q --no-allow-insecure-repositories update && \
+          apt-get install --no-install-recommends --assume-yes \
+            make plantuml
+
+      - name: Test
+        run: 'PLANTUML=/usr/share/plantuml/plantuml.jar make test'
