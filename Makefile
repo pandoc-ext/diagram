@@ -3,9 +3,9 @@ PANDOC ?= pandoc
 .PHONY: test
 test: clean sample.html
 
-sample.html: sample.md diagram-generator.lua
+sample.html: sample.md diagram.lua
 	@$(PANDOC) --self-contained \
-	    --lua-filter=diagram-generator.lua \
+	    --lua-filter=diagram.lua \
 	    --metadata=pythonPath:"python3" \
 	    --metadata=title:"README" \
 	    --output=$@ $<
