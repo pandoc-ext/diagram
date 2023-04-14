@@ -21,7 +21,7 @@ on:
     - cron: '27 4 * * 2'
 
 jobs:
-  test:
+  plantuml:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -46,4 +46,29 @@ jobs:
             make plantuml
 
       - name: Test
-        run: 'PLANTUML=/usr/share/plantuml/plantuml.jar make test'
+        run: 'PLANTUML=/usr/share/plantuml/plantuml.jar make test-plantuml'
+
+  tikz:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        pandoc:
+          - latest
+
+    container:
+      image: pandoc/latex:${{ matrix.pandoc }}-ubuntu
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          tlmgr install pgf
+          apt-get -q --no-allow-insecure-repositories update && \
+          apt-get install --no-install-recommends --assume-yes \
+            make inkscape
+
+      - name: Test
+        run: 'make test-tikz'
