@@ -1,7 +1,13 @@
+FILTER_FILE := $(wildcard *.lua)
 PANDOC ?= pandoc
+DIFF ?= diff
 
 .PHONY: test
-test: clean sample.html
+test: test-plantuml
+
+test-%: test/test-%.yaml test/input-%.md $(FILTER_FILE)
+	@$(PANDOC) --defaults test/test-$*.yaml | \
+	  $(DIFF) test/expected-$*.html -
 
 sample.html: sample.md diagram.lua
 	@$(PANDOC) --self-contained \
