@@ -65,7 +65,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          tlmgr install pgf
+          tlmgr install pgf standalone
           apt-get -q --no-allow-insecure-repositories update && \
           apt-get install --no-install-recommends --assume-yes \
             make inkscape
