@@ -144,79 +144,44 @@ local tikz_template = [[
 \end{document}
 ]]
 
--- Returns a function which takes the filename of a PDF or SVG file
--- and a target filename, and writes the input as the given format.
--- Returns `nil` if conversion into the target format is not possible.
-local function convert_with_inkscape(filetype)
-  -- Build the basic Inkscape command for the conversion
-  local inkscape_output_args
+--- Writes the contents into a file at the given path.
+local function write_file (filepath, content)
+  local fh = io.open(filepath, 'wb')
+  fh:write(content)
+  fh:close()
+end
 
-  -- Check inksape version.
-  -- TODO: this can be removed if supporting older Inkscape is not important.
-  local inkscape_v_string = io.popen(inkscape_path .. " --version"):read()
-  local inkscape_v_major = inkscape_v_string:gmatch("([0-9]*)%.")()
-  local isv1 = tonumber(inkscape_v_major) >= 1
-
-  local cmd_arg = isv1 and '"%s" "%s" -o "%s" ' or '"%s" --without-gui --file="%s" '
-
-  if filetype == 'png' then
-    local png_arg = isv1 and '--export-type=png' or '--export-png="%s"'
-    output_args = png_arg .. ' --export-dpi=300'
-  elseif filetype == 'svg' then
-    output_args = isv1 and '--export-type=svg --export-plain-svg' or '--export-plain-svg="%s"'
+--- Converts an image file from to a different format. The formats must
+--- be given as MIME types.
+local function convert_image_file (filename, from_mime, to_mime, opts)
+  local args
+  if to_mime == 'image/png' then
+    args = pandoc.List{'--export-type=png', '--export-dpi=300'}
+  elseif to_mime == 'image/svg+xml' then
+    args = pandoc.List{'--export-type=svg', '--export-plain-svg'}
   else
     return nil
   end
-
-  return function (pdf_file, outfile)
-    local inkscape_command = string.format(
-      cmd_arg .. output_args,
-      inkscape_path,
-      pdf_file,
-      outfile
-    )
-    local command_output = io.popen(inkscape_command)
-    -- TODO: print output when debugging.
-    command_output:close()
-  end
+  args:insert('--export-filename=-')
+  args:insert(filename)
+  return pandoc.pipe('inkscape', args, '')
 end
 
 --- Compile LaTeX with Tikz code to an image
 local function tikz2image(src, filetype, additional_packages)
-  local convert = convert_with_inkscape(filetype)
-  -- Bail if there is now known way from PDF to the target format.
-  if not convert then
-    error(string.format("Don't know how to convert pdf to %s.", filetype))
-  end
   return with_temporary_directory("tikz2image", function (tmpdir)
     return with_working_directory(tmpdir, function ()
       -- Define file names:
       local file_template = "%s/tikz-image.%s"
       local tikz_file = file_template:format(tmpdir, "tex")
       local pdf_file = file_template:format(tmpdir, "pdf")
-      local outfile = file_template:format(tmpdir, filetype)
-
-      -- Build and write the LaTeX document:
-      local f = io.open(tikz_file, 'w')
-      f:write(tikz_template:format(additional_packages or '', src))
-      f:close()
+      local tex_code = tikz_template:format(additional_packages or '', src)
+      write_file(tikz_file, tex_code)
 
       -- Execute the LaTeX compiler:
       pandoc.pipe(pdflatex_path, {'-output-directory', tmpdir, tikz_file}, '')
 
-      convert(pdf_file, outfile)
-
-      -- Try to open and read the image:
-      local img_data
-      local r = io.open(outfile, 'rb')
-      if r then
-        img_data = r:read("*all")
-        r:close()
-      else
-        -- TODO: print warning
-      end
-
-      return img_data
+      return convert_image_file(pdf_file, 'application/pdf', 'image/svg+xml')
     end)
   end)
 end
@@ -271,41 +236,22 @@ end
 --
 
 local function asymptote(code, filetype)
-  local convert
-  if filetype ~= 'svg' and filetype ~= 'png' then
-    error(string.format("Conversion to %s not implemented", filetype))
-  end
+  local mimetype = filetype == 'png'
+    and 'image/png'
+    or 'image/svg+xml'
   return with_temporary_directory(
     "asymptote",
     function(tmpdir)
       return with_working_directory(
         tmpdir,
         function ()
-          local asy_file = "pandoc_diagram.asy"
-          local svg_file = "pandoc_diagram.svg"
-          local f = io.open(asy_file, 'w')
-          f:write(code)
-          f:close()
-
-          pandoc.pipe(asymptote_path, {"-f", "svg", "-o", "pandoc_diagram", asy_file}, "")
-
-          local r
-          if filetype == 'svg' then
-            r = io.open(svg_file, 'rb')
-          else
-            local png_file = "pandoc_diagram.png"
-            convert_with_inkscape("png")(svg_file, png_file)
-            r = io.open(png_file, 'rb')
-          end
-
-          local img_data
-          if r then
-            img_data = r:read("*all")
-            r:close()
-          else
-            error("could not read asymptote result file")
-          end
-          return img_data
+          local pdf_file = "pandoc_diagram.pdf"
+          pandoc.pipe(
+            asymptote_path,
+            {'-tex', 'pdflatex', "-o", "pandoc_diagram", '-'},
+            code
+          )
+          return convert_image_file(pdf_file, 'application/pdf', mimetype)
       end)
   end)
 end
