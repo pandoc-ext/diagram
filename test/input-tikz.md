@@ -4,7 +4,8 @@ Example usage from [TikZ
 examples](http://www.texample.net/tikz/examples/parallelepiped/) by
 [Kjell Magne Fauske](http://www.texample.net/tikz/examples/nav1d/):
 
-```{.tikz caption="This is an image, created by **TikZ i.e. LaTeX**."
+```{.tikz caption="Tetrahedron inscribed in a parallelepiped."
+     filename="parallelepiped"
      additionalPackages="\usepackage{adjustbox}"}
 \usetikzlibrary{arrows}
 \tikzstyle{int}=[draw, fill=blue!20, minimum size=2em]
