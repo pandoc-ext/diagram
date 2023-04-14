@@ -84,7 +84,7 @@ end
 -- must be called first to get the desired path. If one of these
 -- meta options was set, it gets used instead of the corresponding
 -- environment variable:
-function Meta(meta)
+local function configure (meta)
   plantuml_path = stringify(
     meta.plantuml_path or meta.plantumlPath or plantuml_path
   )
@@ -311,7 +311,7 @@ local function asymptote(code, filetype)
 end
 
 -- Executes each document's code block to find matching code blocks:
-function CodeBlock(block)
+local function code_to_figure (block)
   -- Using a table with all known generators i.e. converters:
   local converters = {
     plantuml = plantuml,
@@ -374,10 +374,9 @@ function CodeBlock(block)
   return pandoc.Figure(pandoc.Plain{img_obj}, caption, fig_attr)
 end
 
--- Normally, pandoc will run the function in the built-in order Inlines ->
--- Blocks -> Meta -> Pandoc. We instead want Meta -> Blocks. Thus, we must
--- define our custom order:
-return {
-  {Meta = Meta},
-  {CodeBlock = CodeBlock},
-}
+function Pandoc (doc)
+  configure(doc.meta)
+  return doc:walk {
+    CodeBlock = code_to_figure,
+  }
+end
