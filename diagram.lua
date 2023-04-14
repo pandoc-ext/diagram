@@ -12,7 +12,7 @@ Copyright: © 2018-2021 John MacFarlane <jgm@berkeley.edu>,
 License:   MIT – see LICENSE file for details
 ]]
 -- Module pandoc.system is required and was added in version 2.7.3
-PANDOC_VERSION:must_be_at_least '2.7.3'
+PANDOC_VERSION:must_be_at_least '3.0'
 
 local system = require 'pandoc.system'
 local utils = require 'pandoc.utils'
@@ -360,50 +360,18 @@ function CodeBlock(block)
     and pandoc.read(block.attributes.caption).blocks
     or pandoc.Blocks{}
   local alt = pandoc.utils.blocks_to_inlines(caption)
+  local fig_attr = {
+    id = block.identifier,
+    name = block.attributes.name,
+  }
+  local img_attr = {
+    width = block.attributes.width,
+    height = block.attributes.height,
+  }
+  local img_obj = pandoc.Image(alt, fname, "", img_attr)
 
-  if PANDOC_VERSION < 3 then
-    -- A non-empty caption means that this image is a figure. We have to
-    -- set the image title to "fig:" for pandoc to treat it as such.
-    local title = #caption > 0 and "fig:" or ""
-
-    -- Transfer identifier and other relevant attributes from the code
-    -- block to the image. The `name` is kept as an attribute.
-    -- This allows a figure block starting with:
-    --
-    --     ```{#fig:example .plantuml caption="Image created by **PlantUML**."}
-    --
-    -- to be referenced as @fig:example outside of the figure when used
-    -- with `pandoc-crossref`.
-    local img_attr = {
-      id = block.identifier,
-      name = block.attributes.name,
-      width = block.attributes.width,
-      height = block.attributes.height
-    }
-
-    -- Create a new image for the document's structure. Attach the user's
-    -- caption. Also use a hack (fig:) to enforce pandoc to create a
-    -- figure i.e. attach a caption to the image.
-    local img_obj = pandoc.Image(alt, fname, title, img_attr)
-
-    -- Finally, put the image inside an empty paragraph. By returning the
-    -- resulting paragraph object, the source code block gets replaced by
-    -- the image:
-    return pandoc.Para{ img_obj }
-  else
-    local fig_attr = {
-      id = block.identifier,
-      name = block.attributes.name,
-    }
-    local img_attr = {
-      width = block.attributes.width,
-      height = block.attributes.height,
-    }
-    local img_obj = pandoc.Image(alt, fname, "", img_attr)
-
-    -- Create a figure that contains just this image.
-    return pandoc.Figure(pandoc.Plain{img_obj}, caption, fig_attr)
-  end
+  -- Create a figure that contains just this image.
+  return pandoc.Figure(pandoc.Plain{img_obj}, caption, fig_attr)
 end
 
 -- Normally, pandoc will run the function in the built-in order Inlines ->
