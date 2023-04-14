@@ -343,8 +343,12 @@ function CodeBlock(block)
   -- If we got here, then the transformation went ok and `img` contains
   -- the image data.
 
-  -- Create figure name by hashing the image content
-  local fname = pandoc.sha1(img) .. "." .. filetype
+  -- Use the block's filename attribute or create a new name by hashing the
+  -- image content.
+  local basename, extension = pandoc.path.split_extension(
+    block.attributes.filename or pandoc.sha1(img)
+  )
+  local fname = basename .. (extension ~= '' and extension or '.' .. filetype)
 
   -- Store the data in the media bag:
   pandoc.mediabag.insert(fname, mimetype, img)
