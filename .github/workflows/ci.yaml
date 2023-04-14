@@ -96,3 +96,27 @@ jobs:
 
       - name: Test
         run: 'make test-dot'
+
+  Asymptote:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        pandoc:
+          - latest
+
+    container:
+      image: pandoc/latex:${{ matrix.pandoc }}-ubuntu
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        run: |
+          apt-get -q --no-allow-insecure-repositories update && \
+          apt-get install --no-install-recommends --assume-yes \
+            make inkscape asymptote
+
+      - name: Test
+        run: 'make test-asymptote'
