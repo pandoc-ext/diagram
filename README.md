@@ -6,6 +6,14 @@ can be processed. This document also serves as a test document,
 which is why the subsequent test diagrams are integrated in every
 supported language.
 
+## Status
+
+**This filter is based of the `diagram-generator` filter in the
+[pandoc/lua-filters][] repository. It is currently reworked; config
+and other details are subject to change.**
+
+[pandoc/lua-filters]: https://github.com/pandoc/lua-filters
+
 ## Prerequisites
 
 To be able to use this Lua filter, the respective external tools
