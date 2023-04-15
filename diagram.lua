@@ -22,13 +22,16 @@ end
 local with_temporary_directory = system.with_temporary_directory
 local with_working_directory = system.with_working_directory
 
+--- List of paths that should not be set to any value if the respective
+--- env var is undefined.
 local path_can_be_nil = {
   python_activate = true,
 }
---- Table containing program paths. If the program has no explicit path set,
---- then the value of the environment variable with the uppercase name of the
---- program is used when defined. The fallback is to use just the program name,
---- which will cause the program to be looked up in the PATH.
+--- Table containing program paths. If the program has no explicit path
+--- set, then the value of the environment variable with the uppercase
+--- name of the program is used when defined. The fallback is to use
+--- just the program name, which will cause the program to be looked up
+--- in the PATH.
 local path = setmetatable(
   {},
   {
@@ -48,6 +51,21 @@ local path = setmetatable(
     end
   }
 )
+
+--- Reads the contents of a file.
+local function read_file (filepath)
+  local fh = io.open(filepath, 'rb')
+  local contents = fh:read('a')
+  fh:close()
+  return contents
+end
+
+--- Writes the contents into a file at the given path.
+local function write_file (filepath, content)
+  local fh = io.open(filepath, 'wb')
+  fh:write(content)
+  fh:close()
+end
 
 -- Execute the meta data table to determine the paths. This function
 -- must be called first to get the desired path. If one of these
@@ -89,21 +107,6 @@ local tikz_template = [[
 %s
 \end{document}
 ]]
-
---- Reads the contents of a file.
-local function read_file (filepath)
-  local fh = io.open(filepath, 'rb')
-  local contents = fh:read('a')
-  fh:close()
-  return contents
-end
-
---- Writes the contents into a file at the given path.
-local function write_file (filepath, content)
-  local fh = io.open(filepath, 'wb')
-  fh:write(content)
-  fh:close()
-end
 
 --- Compile LaTeX with TikZ code to an image
 local function tikz2image(src, additional_packages)
@@ -181,6 +184,10 @@ local function asymptote(code)
   end)
 end
 
+--
+-- Common code to convert code to a figure.
+--
+
 local function format_accepts_pdf_images (format)
   return format == 'latex' or format == 'context'
 end
@@ -205,27 +212,50 @@ local pdf2svg = function (imgdata)
   return pandoc.pipe(path['inkscape'], args, ''), os.remove(pdf_file)
 end
 
+--- Table containing mapping from the names of supported diagram engines
+--- to the converter functions.
+local diagram_engines = {
+  asymptote = asymptote,
+  graphviz = graphviz,
+  plantuml = plantuml,
+  py2image = py2image,
+  tikz = tikz2image,
+}
+
+local function diagram_properties (cb)
+  -- Read caption attribute as Markdown
+  local caption = cb.attributes.caption
+    and pandoc.read(cb.attributes.caption).blocks
+    or pandoc.Blocks{}
+  return {
+    ['alt'] = pandoc.utils.blocks_to_inlines(caption),
+    ['caption'] = caption,
+    ['image-attr'] = {
+      height = cb.attributes.height,
+      width = cb.attributes.width,
+    },
+    ['fig-attr'] = {
+      id = cb.identifier,
+      name = cb.attributes.name,
+    },
+  }
+end
+
 -- Executes each document's code block to find matching code blocks:
 local function code_to_figure (block)
-  -- Using a table with all known generators i.e. converters:
-  local converters = {
-    plantuml = plantuml,
-    graphviz = graphviz,
-    tikz = tikz2image,
-    py2image = py2image,
-    asymptote = asymptote,
-  }
-
   -- Check if a converter exists for this block. If not, return the block
   -- unchanged.
-  local img_converter = converters[block.classes[1]]
-  if not img_converter then
+  local diagram_type = block.classes[1]
+  local engine = diagram_engines[diagram_type]
+  if not engine then
     return nil
   end
 
-  -- Call the correct converter which belongs to the used class:
-  local success, img, imgtype = pcall(img_converter, block.text,
-       block.attributes["additionalPackages"] or nil)
+  -- Call the converter
+  local additional_packages =
+    block.attributes['additional-packages'] or
+    block.attributes["additionalPackages"]
+  local success, img, imgtype = pcall(engine, block.text, additional_packages)
 
   -- Bail if an error occured; img contains the error message when that
   -- happens.
@@ -256,25 +286,10 @@ local function code_to_figure (block)
   -- Store the data in the media bag:
   pandoc.mediabag.insert(fname, imgtype, img)
 
-  local enable_caption = nil
-
-  -- If the user defines a caption, read it as Markdown.
-  local caption = block.attributes.caption
-    and pandoc.read(block.attributes.caption).blocks
-    or pandoc.Blocks{}
-  local alt = pandoc.utils.blocks_to_inlines(caption)
-  local fig_attr = {
-    id = block.identifier,
-    name = block.attributes.name,
-  }
-  local img_attr = {
-    width = block.attributes.width,
-    height = block.attributes.height,
-  }
-  local img_obj = pandoc.Image(alt, fname, "", img_attr)
-
   -- Create a figure that contains just this image.
-  return pandoc.Figure(pandoc.Plain{img_obj}, caption, fig_attr)
+  local props = diagram_properties(block)
+  local img_obj = pandoc.Image(props.alt, fname, "", props['image-attr'])
+  return pandoc.Figure(pandoc.Plain{img_obj}, props.caption, props['fig-attr'])
 end
 
 function Pandoc (doc)
