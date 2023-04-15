@@ -1,263 +1,98 @@
-# Diagram Generator
+Diagram Generator
+=================
 
-This Lua filter is used to create images with or without captions
-from code blocks. Currently PlantUML, Graphviz, Ti*k*Z and Python
-can be processed. This document also serves as a test document,
-which is why the subsequent test diagrams are integrated in every
-supported language.
+This Lua filter is used to create figures from code blocks: images
+are generated from the code with the help of external programs.
+Currently PlantUML, Graphviz, Ti*k*Z and Python can be processed.
 
-## Status
 
-**This filter is based of the `diagram-generator` filter in the
-[pandoc/lua-filters][] repository. It is currently reworked; config
-and other details are subject to change.**
+Usage
+-----
 
-[pandoc/lua-filters]: https://github.com/pandoc/lua-filters
+The filter modifies the internal document representation; it can
+be used with many publishing systems that are based on pandoc.
 
-## Prerequisites
+### Plain pandoc
 
-To be able to use this Lua filter, the respective external tools
-must be installed. However, it is sufficient if the tools to be
-used are installed. If you only want to use PlantUML, you don't
-need LaTeX or Python, etc.
+Pass the filter to pandoc via the `--lua-filter` (or `-L`) command
+line option.
 
-### PlantUML
+    pandoc --lua-filter diagram.lua ...
 
-To use PlantUML, you must install PlantUML itself. See the
-[PlantUML website](http://plantuml.com/) for more details. It should be
-noted that PlantUML is a Java program and therefore Java must also
-be installed.
+### Quarto
 
-By default, this filter expects the plantuml.jar file to be in the
-working directory. Alternatively, the environment variable
-`PLANTUML` can be set with a path. If, for example, a specific
-PlantUML version is to be used per pandoc document, the
-`plantumlPath` meta variable can be set.
+While it is possible to use this filter with Quarto, it is not
+encouraged. Quarto comes its own system for diagram generation,
+and that should be used instead.
 
-Furthermore, this filter assumes that Java is located in the
-system or user path. This means that from any place of the system
-the `java` command is understood. Alternatively, the `JAVA_HOME`
-environment variable gets used. To use a specific Java version per
-pandoc document, use the `javaPath` meta variable. Please notice
-that `JAVA_HOME` must be set to the java's home directory e.g.
-`c:\Program Files\Java\jre1.8.0_201\` whereas `javaPath` must be
-set to the absolute path of `java.exe` e.g.
-`c:\Program Files\Java\jre1.8.0_201\bin\java.exe`.
+### R Markdown
 
-Example usage:
+Use `pandoc_args` to invoke the filter. See the [R Markdown
+Cookbook](https://bookdown.org/yihui/rmarkdown-cookbook/lua-filters.html)
+for details.
 
-~~~~~~~~~~~~~~~~
-```{.plantuml caption="This is an image, created by **PlantUML**." width=50%}
-@startuml
-Alice -> Bob: Authentication Request Bob --> Alice: Authentication Response
-Alice -> Bob: Another authentication Request Alice <-- Bob: another Response
-@enduml
-```
-~~~~~~~~~~~~~~~~
-
-### Graphviz
-To use Graphviz you only need to install Graphviz, as you can read
-on its [website](http://www.graphviz.org/). There are no other
-dependencies.
-
-This filter assumes that the `dot` command is located in the path
-and therefore can be used from any location. Alternatively, you can
-set the environment variable `DOT` or use the pandoc's meta variable
-`dotPath`.
-
-Example usage from [the Graphviz
-gallery](https://graphviz.gitlab.io/_pages/Gallery/directed/fsm.html):
-
-~~~~~~~~~~~~~~~~
-```{.graphviz caption="This is an image, created by **Graphviz**'s dot."}
-digraph finite_state_machine {
-	rankdir=LR;
-	size="8,5"
-	node [shape = doublecircle]; LR_0 LR_3 LR_4 LR_8;
-	node [shape = circle];
-	LR_0 -> LR_2 [ label = "SS(B)" ];
-	LR_0 -> LR_1 [ label = "SS(S)" ];
-	LR_1 -> LR_3 [ label = "S($end)" ];
-	LR_2 -> LR_6 [ label = "SS(b)" ];
-	LR_2 -> LR_5 [ label = "SS(a)" ];
-	LR_2 -> LR_4 [ label = "S(A)" ];
-	LR_5 -> LR_7 [ label = "S(b)" ];
-	LR_5 -> LR_5 [ label = "S(a)" ];
-	LR_6 -> LR_6 [ label = "S(b)" ];
-	LR_6 -> LR_5 [ label = "S(a)" ];
-	LR_7 -> LR_8 [ label = "S(b)" ];
-	LR_7 -> LR_5 [ label = "S(a)" ];
-	LR_8 -> LR_6 [ label = "S(b)" ];
-	LR_8 -> LR_5 [ label = "S(a)" ];
-}
-```
-~~~~~~~~~~~~~~~~
-
-### Ti*k*Z
-Ti*k*Z (cf. [Wikipedia](https://en.wikipedia.org/wiki/PGF/TikZ)) is a
-description language for graphics of any kind that can be used within
-LaTeX (cf. [Wikipedia](https://en.wikipedia.org/wiki/LaTeX)).
-
-Therefore a LaTeX system must be installed on the system. The Ti*k*Z code is
-embedded into a dynamic LaTeX document. This temporary document gets
-translated into a PDF document using LaTeX (`pdflatex`). Finally,
-Inkscape is used to convert the PDF file to the desired format.
-
-Note: We are using Inkscape here to use a stable solution for the
-convertion. Formerly ImageMagick was used instead. ImageMagick is
-not able to convert PDF files. Hence, it uses Ghostscript to do
-so, cf. [1](https://stackoverflow.com/a/6599718/2258393).
-Unfortunately, Ghostscript behaves unpredictable during Windows and
-Linux tests cases, cf. [2](https://stackoverflow.com/questions/21774561/some-pdfs-are-converted-improperly-using-imagemagick),
-[3](https://stackoverflow.com/questions/9064706/imagemagic-convert-command-pdf-convertion-with-bad-size-orientation), [4](https://stackoverflow.com/questions/18837093/imagemagic-renders-image-with-black-background),
-[5](https://stackoverflow.com/questions/37392798/pdf-to-svg-is-not-perfect),
-[6](https://stackoverflow.com/q/10288065/2258393), etc. By using Inkscape,
-we need one dependency less and get rid of unexpected Ghostscript issues.
-
-Due to this more complicated process, the use of Ti*k*Z is also more
-complicated overall. The process is error-prone: An insufficiently
-configured LaTeX installation or an insufficiently configured
-Inkscape installation can lead to errors. Overall, this results in
-the following dependencies:
-
-- Any LaTeX installation. This should be configured so that
-missing packages are installed automatically. This filter uses the
-`pdflatex` command which is available by the system's path. Alternatively,
-you can set the `PDFLATEX` environment variable. In case you have to use
-a specific LaTeX version on a pandoc document basis, you might set the
-`pdflatexPath` meta variable.
-
-- An installation of [Inkscape](https://inkscape.org/).
-It is assumed that the `inkscape` command is in the path and can be
-executed from any location. Alternatively, the environment
-variable `INKSCAPE` can be set with a path. If a specific
-version per pandoc document is to be used, the `inkscapePath`
-meta-variable can be set.
-
-In order to use additional LaTeX packages, use the optional
-`additionalPackages` attribute in your document, as in the
-example below.
-
-Example usage from [TikZ
-examples](http://www.texample.net/tikz/examples/parallelepiped/) by
-[Kjell Magne Fauske](http://www.texample.net/tikz/examples/nav1d/):
-
-~~~~~~~~~~~~~~~~
-```{.tikz caption="This is an image, created by **TikZ i.e. LaTeX**."
-     additionalPackages="\usepackage{adjustbox}"}
-\usetikzlibrary{arrows}
-\tikzstyle{int}=[draw, fill=blue!20, minimum size=2em]
-\tikzstyle{init} = [pin edge={to-,thin,black}]
-
-\resizebox{16cm}{!}{%
-  \trimbox{3.5cm 0cm 0cm 0cm}{
-    \begin{tikzpicture}[node distance=2.5cm,auto,>=latex']
-      \node [int, pin={[init]above:$v_0$}] (a) {$\frac{1}{s}$};
-      \node (b) [left of=a,node distance=2cm, coordinate] {a};
-      \node [int, pin={[init]above:$p_0$}] at (0,0) (c)
-        [right of=a] {$\frac{1}{s}$};
-      \node [coordinate] (end) [right of=c, node distance=2cm]{};
-      \path[->] (b) edge node {$a$} (a);
-      \path[->] (a) edge node {$v$} (c);
-      \draw[->] (c) edge node {$p$} (end) ;
-    \end{tikzpicture}
-  }
-}
-```
-~~~~~~~~~~~~~~~~
-
-### Python
-In order to use Python to generate a diagram, your Python code must store the
-final image data in a temporary file with the correct format. In case you use
-matplotlib for a diagram, add the following line to do so:
-
-```python
-plt.savefig("$DESTINATION$", dpi=300, format="$FORMAT$")
+``` yaml
+---
+output:
+  word_document:
+    pandoc_args: ['--lua-filter=diagram.lua']
+---
 ```
 
-The placeholder `$FORMAT$` gets replace by the necessary format. Most of the
-time, this will be `png` or `svg`. The second placeholder, `$DESTINATION$`
-gets replaced by the path and file name of the destination. Both placeholders
-can be used as many times as you want. Example usage from the [Matplotlib
-examples](https://matplotlib.org/gallery/lines_bars_and_markers/cohere.html#sphx-glr-gallery-lines-bars-and-markers-cohere-py):
+Diagram types
+-------------
 
-~~~~~~~~~~~~~~~~
-```{.py2image caption="This is an image, created by **Python**."}
-import matplotlib
-matplotlib.use('Agg')
+The table below lists the supported diagram drawing systems, the
+class that must be used for the system, and the main executable
+that the filter calls to generate an image from the code. The
+*environment variables* column lists the names of env variables
+that can be used to specify a specific executable.
 
-import sys
-import numpy as np
-import matplotlib.pyplot as plt
+| System      | code block class  | executable | environment variables |
+|-------------|-------------------|------------|-----------------------|
+| [Asymptote] | `asymptote`       | `asy`      | `ASYMPTOTE`, `ASY`    |
+| [GraphViz]  | `graphviz`, `dot` | `dot`      | `DOT`                 |
+| [PlantUML]  | `plantuml`        | `plantuml` | `PLANTUML`            |
+| [Ti*k*Z]    | `tikz`            | `pdflatex` | `PDFLATEX`            |
 
-# Fixing random state for reproducibility
-np.random.seed(19680801)
+[Asymptote]:
+[GraphViz]: https://www.graphviz.org/
+[PlantUML]: https://plantuml.org/
+[Ti*k*Z]: https://en.wikipedia.org/wiki/PGF/TikZ
 
-dt = 0.01
-t = np.arange(0, 30, dt)
-nse1 = np.random.randn(len(t))                 # white noise 1
-nse2 = np.random.randn(len(t))                 # white noise 2
+Configuration
+-------------
 
-# Two signals with a coherent part at 10Hz and a random part
-s1 = np.sin(2 * np.pi * 10 * t) + nse1
-s2 = np.sin(2 * np.pi * 10 * t) + nse2
+The filter can be configured with the `diagram` metadata entry.
 
-fig, axs = plt.subplots(2, 1)
-axs[0].plot(t, s1, t, s2)
-axs[0].set_xlim(0, 2)
-axs[0].set_xlabel('time')
-axs[0].set_ylabel('s1 and s2')
-axs[0].grid(True)
+Currently supported options:
 
-cxy, f = axs[1].cohere(s1, s2, 256, 1. / dt)
-axs[1].set_ylabel('coherence')
+- `path`: map from executable names to file paths. Just like with
+  environment variables, this will override the binary that is
+  called to convert an image. The entries in the metadata have the
+  highest priority, so if both a metadata field and an env var is
+  set, then the value from the metadata will be used.
 
-fig.tight_layout()
-plt.savefig("$DESTINATION$", dpi=300, format="$FORMAT$")
-```
-~~~~~~~~~~~~~~~~
+- `cache`: controls whether the images are cached. If the cache is
+  enabled, then the images are recreated only when their code
+  changes. This option is *enabled* by default.
 
-Precondition to use Python is a Python environment which contains all
-necessary libraries you want to use. To use, for example, the standard
-[Anaconda Python](https://www.anaconda.com/distribution/) environment
-on a Microsoft Windows system ...
+- `cache-dir`: Sets the directory in which the images are cached.
+  The default is to use the `pandoc-diagram-filter` subdir of the
+  a common caching location. This will be, in the order of
+  preference, the value of the `XDG_CACHE_HOME` environment
+  variable if it is set, or alternatively `%USERPROFILE%\.cache` on
+  Windows and `$HOME/.cache` on all other platforms.
 
-- set the environment variable `PYTHON` or the meta key `pythonPath`
-to `c:\ProgramData\Anaconda3\python.exe`
+  Caching is disabled if none of the environment variables
+  mentioned above has been defined.
 
-- set the environment variable `PYTHON_ACTIVATE` or the meta
-key `activatePythonPath` to `c:\ProgramData\Anaconda3\Scripts\activate.bat`.
 
-Pandoc will activate this Python environment and starts Python with your code.
+Security
+--------
 
-## How to run pandoc
-This section will show, how to call Pandoc in order to use this filter with
-meta keys. The following command assume, that the filters are stored in the
-subdirectory `filters`. Further, this is a example for a Microsoft Windows
-system.
-
-Command to use PlantUML (a single line):
-
-```
-pandoc.exe README.md -f markdown -t docx --self-contained --standalone --lua-filter=filters\diagram.lua --metadata=plantumlPath:"c:\ProgramData\chocolatey\lib\plantuml\tools\plantuml.jar" --metadata=javaPath:"c:\Program Files\Java\jre1.8.0_201\bin\java.exe" -o README.docx
-```
-
-All available environment variables:
-
-- `PLANTUML` e.g. `c:\ProgramData\chocolatey\lib\plantuml\tools\plantuml.jar`; Default: `plantuml.jar`
-- `INKSCAPE` e.g. `c:\Program Files\Inkscape\inkscape.exe`; Default: `inkscape`
-- `PYTHON` e.g. `c:\ProgramData\Anaconda3\python.exe`; Default: n/a
-- `PYTHON_ACTIVATE` e.g. `c:\ProgramData\Anaconda3\Scripts\activate.bat`; Default: n/a
-- `JAVA_HOME` e.g. `c:\Program Files\Java\jre1.8.0_201`; Default: n/a
-- `DOT` e.g. `c:\ProgramData\chocolatey\bin\dot.exe`; Default: `dot`
-- `PDFLATEX` e.g. `c:\Program Files\MiKTeX 2.9\miktex\bin\x64\pdflatex.exe`; Default: `pdflatex`
-
-All available meta keys:
-
-- `plantumlPath`
-- `inkscapePath`
-- `pythonPath`
-- `activatePythonPath`
-- `javaPath`
-- `dotPath`
-- `pdflatexPath`
+This filter **must not** be used with **untrusted documents**. The
+filter effectively turns the document into a script that can run
+arbitrary commands with the user's permissions. It is hence
+recommended to review any document before using it with this
+filter.
