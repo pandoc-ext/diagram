@@ -253,14 +253,29 @@ end
 
 --- Table containing mapping from the names of supported diagram engines
 --- to the converter functions.
-local diagram_engines = {
-  asymptote = {asymptote, '%%'},
-  dot       = {graphviz, '//'},
-  graphviz  = {graphviz, '//'},
-  plantuml  = {plantuml, "'"},
-  py2image  = {py2image, '#'},
-  tikz      = {tikz2image, '%%'},
-}
+local diagram_engines = setmetatable(
+  {
+    asymptote = {asymptote, '%%'},
+    dot       = {graphviz, '//'},
+    graphviz  = {graphviz, '//'},
+    plantuml  = {plantuml, "'"},
+    py2image  = {py2image, '#'},
+    tikz      = {tikz, '%%'},
+  },
+  {
+    __index = function (tbl, diagtype)
+      local success, result = pcall(require, 'diagram-' .. diagtype)
+      if success and result then
+        tbl[diagtype] = result
+        return result
+      else
+        -- do not try this again
+        tbl[diagtype] = false
+        return nil
+      end
+    end
+  }
+)
 
 local function properties_from_code (code, comment_start)
   local props = {}
