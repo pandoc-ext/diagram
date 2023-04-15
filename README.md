@@ -64,7 +64,7 @@ type by doing the equivalent of `require 'diagram-TYPE'`, where
 the loaded engine will be used for this type; otherwise the block
 will be returned unchanged.
 
-[Asymptote]:
+[Asymptote]: https://asymptote.sourceforge.io/
 [GraphViz]: https://www.graphviz.org/
 [PlantUML]: https://plantuml.org/
 [Ti*k*Z]: https://en.wikipedia.org/wiki/PGF/TikZ
