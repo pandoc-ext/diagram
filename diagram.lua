@@ -215,28 +215,59 @@ end
 --- Table containing mapping from the names of supported diagram engines
 --- to the converter functions.
 local diagram_engines = {
-  asymptote = asymptote,
-  graphviz = graphviz,
-  plantuml = plantuml,
-  py2image = py2image,
-  tikz = tikz2image,
+  asymptote = {asymptote, '%%'},
+  dot       = {graphviz, '//'},
+  graphviz  = {graphviz, '//'},
+  plantuml  = {plantuml, "'"},
+  py2image  = {py2image, '#'},
+  tikz      = {tikz2image, '%%'},
 }
 
-local function diagram_properties (cb)
+local function properties_from_code (code, comment_start)
+  local props = {}
+  local pattern = comment_start:gsub('%p', '%%%1') .. '| ' ..
+    '([-_%w]+): ([^\n]*)\n'
+  for key, value in code:gmatch(pattern) do
+    if key == 'fig-cap' then
+      props['caption'] = value
+    else
+      props[key] = value
+    end
+  end
+  return props
+end
+
+local function diagram_properties (cb, option_start)
+  local attribs = option_start
+    and properties_from_code(cb.text, option_start)
+    or {}
+  for key, value in pairs(cb.attributes) do
+    attribs[key] = value
+  end
+
   -- Read caption attribute as Markdown
-  local caption = cb.attributes.caption
-    and pandoc.read(cb.attributes.caption).blocks
+  local caption = attribs.caption
+    and pandoc.read(attribs.caption).blocks
     or pandoc.Blocks{}
+  local fig_attr = {
+    id = cb.identifier ~= '' and cb.identifier or attribs.label,
+    name = attribs.name,
+  }
+  for k, v in pairs(attribs) do
+    local key = k:match '^fig%-(%a%w*)$'
+    if key then
+      fig_attr[key] = v
+    end
+  end
   return {
     ['alt'] = pandoc.utils.blocks_to_inlines(caption),
     ['caption'] = caption,
+    ['fig-attr'] = fig_attr,
+    ['filename'] = attribs.filename,
     ['image-attr'] = {
-      height = cb.attributes.height,
-      width = cb.attributes.width,
-    },
-    ['fig-attr'] = {
-      id = cb.identifier,
-      name = cb.attributes.name,
+      height = attribs.height,
+      width = attribs.width,
+      style = attribs.style,
     },
   }
 end
@@ -246,7 +277,7 @@ local function code_to_figure (block)
   -- Check if a converter exists for this block. If not, return the block
   -- unchanged.
   local diagram_type = block.classes[1]
-  local engine = diagram_engines[diagram_type]
+  local engine, linecomment_start = table.unpack(diagram_engines[diagram_type])
   if not engine then
     return nil
   end
@@ -275,19 +306,20 @@ local function code_to_figure (block)
     img, imgtype = pdf2svg(img), 'image/svg+xml'
   end
 
+  -- Unified properties.
+  local props = diagram_properties(block, linecomment_start)
+
   -- Use the block's filename attribute or create a new name by hashing the
   -- image content.
-  local basename, extension = pandoc.path.split_extension(
-    block.attributes.filename or pandoc.sha1(img)
+  local basename, _extension = pandoc.path.split_extension(
+    props.filename or pandoc.sha1(img)
   )
-  local fname = basename ..
-    (extension ~= '' and extension or '.' .. extension_for_mimetype(imgtype))
+  local fname = basename .. '.' .. extension_for_mimetype(imgtype)
 
   -- Store the data in the media bag:
   pandoc.mediabag.insert(fname, imgtype, img)
 
   -- Create a figure that contains just this image.
-  local props = diagram_properties(block)
   local img_obj = pandoc.Image(props.alt, fname, "", props['image-attr'])
   return pandoc.Figure(pandoc.Plain{img_obj}, props.caption, props['fig-attr'])
 end

@@ -26,3 +26,25 @@ examples](http://www.texample.net/tikz/examples/parallelepiped/) by
   }
 }
 ```
+
+``` {.tikz}
+%%| label: delta-graph
+%%| filename: delta-graph.pdf
+%%| fig-cap: Diagram showing how the delta-graph relates to the other graphs.
+\usetikzlibrary{arrows,shapes}
+
+\tikzset{cat object/.style=   {node distance=4em}}
+
+\begin{tikzpicture}[]
+\node [cat object] (Del)                {$D$};
+\node [cat object] (L)   [below of=Del] {$X$};
+\node [cat object] (I)   [right of=L]   {$I$};
+\node [cat object] (F)   [left of=L]    {$F$};
+
+\draw [->] (Del) to node [left,near end]{$\scriptstyle{d_X}$}     (L);
+\draw [->] (I)   to node [below]        {$\scriptstyle{x}$}       (L);
+\draw [->] (Del) to node [above left]   {$\scriptstyle{d_{F}}$} (F);
+
+\draw [->,dashed] (Del) to node {/}(I);
+\end{tikzpicture}
+```
