@@ -105,24 +105,6 @@ local function write_file (filepath, content)
   fh:close()
 end
 
---- Converts an image file from to a different format. The formats must
---- be given as MIME types.
-local function convert_image (imgdata, from_mime, to_mime, opts)
-  local pdf_file = os.tmpname() .. '.pdf'
-  write_file(pdf_file, imgdata)
-  local args
-  if to_mime == 'image/png' then
-    args = pandoc.List{'--export-type=png', '--export-dpi=300'}
-  elseif to_mime == 'image/svg+xml' then
-    args = pandoc.List{'--export-type=svg', '--export-plain-svg'}
-  else
-    return nil
-  end
-  args:insert('--export-filename=-')
-  args:insert(pdf_file)
-  return pandoc.pipe(path['inkscape'], args, ''), os.remove(pdf_file)
-end
-
 --- Compile LaTeX with TikZ code to an image
 local function tikz2image(src, additional_packages)
   return with_temporary_directory("tikz2image", function (tmpdir)
@@ -210,6 +192,19 @@ local function extension_for_mimetype (mimetype)
     (mimetype == 'image/png' and 'png')
 end
 
+--- Converts a PDF to SVG.
+local pdf2svg = function (imgdata)
+  local pdf_file = os.tmpname() .. '.pdf'
+  write_file(pdf_file, imgdata)
+  local args = {
+    '--export-type=svg',
+    '--export-plain-svg',
+    '--export-filename=-',
+    pdf_file
+  }
+  return pandoc.pipe(path['inkscape'], args, ''), os.remove(pdf_file)
+end
+
 -- Executes each document's code block to find matching code blocks:
 local function code_to_figure (block)
   -- Using a table with all known generators i.e. converters:
@@ -247,8 +242,7 @@ local function code_to_figure (block)
   -- If we got here, then the transformation went ok and `img` contains
   -- the image data.
   if imgtype == 'application/pdf' and not format_accepts_pdf_images(FORMAT) then
-    img = convert_image(img, imgtype, 'image/svg+xml')
-    imgtype = 'image/svg+xml'
+    img, imgtype = pdf2svg(img), 'image/svg+xml'
   end
 
   -- Use the block's filename attribute or create a new name by hashing the
