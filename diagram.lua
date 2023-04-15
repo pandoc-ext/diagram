@@ -354,6 +354,10 @@ local function code_to_figure (block)
   -- Check if a converter exists for this block. If not, return the block
   -- unchanged.
   local diagram_type = block.classes[1]
+  if not diagram_type then
+    return nil
+  end
+
   local engine, linecomment = table.unpack(diagram_engines[diagram_type])
   if not engine then
     return nil

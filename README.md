@@ -55,6 +55,15 @@ that can be used to specify a specific executable.
 | [PlantUML]  | `plantuml`        | `plantuml` | `PLANTUML`            |
 | [Ti*k*Z]    | `tikz`            | `pdflatex` | `PDFLATEX`            |
 
+### Other diagram engines
+
+If the filter finds a code block with an unknown type for the
+first time, then it will try to load a diagram engine for that
+type by doing the equivalent of `require 'diagram-TYPE'`, where
+`TYPE` is the first class of a code block. If this succeeds, then
+the loaded engine will be used for this type; otherwise the block
+will be returned unchanged.
+
 [Asymptote]:
 [GraphViz]: https://www.graphviz.org/
 [PlantUML]: https://plantuml.org/
