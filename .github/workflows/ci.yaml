@@ -46,7 +46,7 @@ jobs:
             make plantuml
 
       - name: Test
-        run: 'PLANTUML=/usr/share/plantuml/plantuml.jar make test-plantuml'
+        run: make test-plantuml
 
   TikZ:
     runs-on: ubuntu-latest

@@ -22,45 +22,36 @@ end
 local with_temporary_directory = system.with_temporary_directory
 local with_working_directory = system.with_working_directory
 
--- The PlantUML path. If set, uses the environment variable PLANTUML or the
--- value "plantuml.jar" (local PlantUML version). In order to define a
--- PlantUML version per pandoc document, use the meta data to define the key
--- "plantuml_path".
-local plantuml_path = os.getenv("PLANTUML") or "plantuml.jar"
+local path_can_be_nil = {
+  python_activate = true,
+}
+--- Table containing program paths. If the program has no explicit path set,
+--- then the value of the environment variable with the uppercase name of the
+--- program is used when defined. The fallback is to use just the program name,
+--- which will cause the program to be looked up in the PATH.
+local path = setmetatable(
+  {},
+  {
+    __index = function (tbl, key)
+      local execpath = key == 'asv' and
+        (os.getenv 'ASYMPTOTE' or os.getenv 'ASY') or
+        os.getenv(key:upper())
 
--- The Inkscape path. In order to define an Inkscape version per pandoc
--- document, use the meta data to define the key "inkscape_path".
-local inkscape_path = os.getenv("INKSCAPE") or "inkscape"
+      if not execpath or execpath == '' then
+        execpath = not path_can_be_nil[key]
+          and key
+          or nil
+      end
 
--- The Python path. In order to define a Python version per pandoc document,
--- use the meta data to define the key "python_path".
-local python_path = os.getenv("PYTHON") or "python"
+      tbl[key] = execpath
+      return execpath
+    end
+  }
+)
 
 -- The Python environment's activate script. Can be set on a per document
 -- basis by using the meta data key "activatePythonPath".
 local python_activate_path = os.getenv("PYTHON_ACTIVATE")
-
--- The Java path. In order to define a Java version per pandoc document,
--- use the meta data to define the key "java_path".
-local java_path = os.getenv("JAVA_HOME")
-if java_path then
-    java_path = java_path .. package.config:sub(1,1) .. "bin"
-        .. package.config:sub(1,1) .. "java"
-else
-    java_path = "java"
-end
-
--- The dot (Graphviz) path. In order to define a dot version per pandoc
--- document, use the meta data to define the key "dot_path".
-local dot_path = os.getenv("DOT") or "dot"
-
--- The pdflatex path. In order to define a pdflatex version per pandoc
--- document, use the meta data to define the key "pdflatex_path".
-local pdflatex_path = os.getenv("PDFLATEX") or "pdflatex"
-
--- The asymptote path. There is also the metadata variable
--- "asymptote_path".
-local asymptote_path = os.getenv ("ASYMPTOTE") or "asy"
 
 -- The default format is SVG i.e. vector graphics:
 local filetype = "svg"
@@ -85,45 +76,22 @@ end
 -- meta options was set, it gets used instead of the corresponding
 -- environment variable:
 local function configure (meta)
-  plantuml_path = stringify(
-    meta.plantuml_path or meta.plantumlPath or plantuml_path
-  )
-  inkscape_path = stringify(
-    meta.inkscape_path or meta.inkscapePath or inkscape_path
-  )
-  python_path = stringify(
-    meta.python_path or meta.pythonPath or python_path
-  )
-  python_activate_path =
-    meta.activate_python_path or meta.activatePythonPath or python_activate_path
-  python_activate_path = python_activate_path and stringify(python_activate_path)
-  java_path = stringify(
-    meta.java_path or meta.javaPath or java_path
-  )
-  dot_path = stringify(
-    meta.path_dot or meta.dotPath or dot_path
-  )
-  pdflatex_path = stringify(
-    meta.pdflatex_path or meta.pdflatexPath or pdflatex_path
-  )
-  asymptote_path = stringify(
-     meta.asymptote_path or meta.asymptotePath or asymptote_path
-  )
+  local conf = meta.diagram or {}
+  for name, execpath in pairs(conf.path or {}) do
+    path[name] = stringify(execpath)
+  end
 end
 
--- Call plantuml.jar with some parameters (cf. PlantUML help):
+-- Call plantuml with some parameters (cf. PlantUML help):
 local function plantuml(puml)
-  return pandoc.pipe(
-    java_path,
-    {"-jar", plantuml_path, "-tsvg", "-pipe", "-charset", "UTF8"},
-    puml
-  ), 'image/svg+xml'
+  local args = {"-tsvg", "-pipe", "-charset", "UTF8"}
+  return pandoc.pipe(path['plantuml'], args, puml), 'image/svg+xml'
 end
 
 -- Call dot (GraphViz) in order to generate the image
 -- (thanks @muxueqz for this code):
 local function graphviz(code, filetype)
-  return pandoc.pipe(dot_path, {"-Tsvg"}, code), 'image/svg+xml'
+  return pandoc.pipe(path['dot'], {"-Tsvg"}, code), 'image/svg+xml'
 end
 
 --
@@ -174,7 +142,7 @@ local function convert_image (imgdata, from_mime, to_mime, opts)
   end
   args:insert('--export-filename=-')
   args:insert(pdf_file)
-  return pandoc.pipe('inkscape', args, ''), os.remove(pdf_file)
+  return pandoc.pipe(path['inkscape'], args, ''), os.remove(pdf_file)
 end
 
 --- Compile LaTeX with TikZ code to an image
@@ -189,7 +157,7 @@ local function tikz2image(src, filetype, additional_packages)
       write_file(tikz_file, tex_code)
 
       -- Execute the LaTeX compiler:
-      pandoc.pipe(pdflatex_path, {'-output-directory', tmpdir, tikz_file}, '')
+      pandoc.pipe(path['pdflatex'], {'-output-directory', tmpdir, tikz_file}, '')
 
       return read_file(pdf_file), 'application/pdf'
     end)
@@ -215,8 +183,8 @@ local function py2image(code, filetype)
   f:close()
 
   -- Execute Python in the desired environment:
-  local pycmd = python_path .. ' ' .. pyfile
-  local command = python_activate_path
+  local pycmd = path['python'] .. ' ' .. pyfile
+  local command = path['python_activate']
     and python_activate_path .. ' && ' .. pycmd
     or pycmd
   os.execute(command)
@@ -250,7 +218,7 @@ local function asymptote(code)
     return with_working_directory(tmpdir, function ()
       local pdf_file = "pandoc_diagram.pdf"
       local args = {'-tex', 'pdflatex', "-o", "pandoc_diagram", '-'}
-      pandoc.pipe(asymptote_path, args, code)
+      pandoc.pipe(path['asy'], args, code)
       return read_file(pdf_file), 'application/pdf'
     end)
   end)
