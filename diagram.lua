@@ -307,7 +307,7 @@ local function diagram_properties (cb, option_start)
 end
 
 local function get_cached_image (codeblock)
-  for _, ext in ipairs{'svg', 'pdf', 'png'} do
+  for _, ext in ipairs{'pdf', 'svg', 'png'} do
     local filename = pandoc.sha1(codeblock.text) .. '.' .. ext
     local imgpath = pandoc.path.join{image_cache, filename}
     local success, imgdata = pcall(read_file, imgpath)
@@ -352,14 +352,15 @@ local function code_to_figure (block)
 
     -- Bail if an error occured; img contains the error message when that
     -- happens.
-    if not (success and img) then
-      io.stderr:write(tostring(img or "no image data has been returned."))
-      io.stderr:write('\n')
-      error 'Image conversion failed. Aborting.'
-    end
-
-    if not imgtype then
-      error 'MIME-type of image is unknown.'
+    if not success then
+      warn(PANDOC_SCRIPT_FILE, img)
+      return nil
+    elseif not img then
+      warn(PANDOC_SCRIPT_FILE, 'Diagram engine returned no image data.')
+      return nil
+    elseif not imgtype then
+      warn(PANDOC_SCRIPT_FILE, 'Diagram engine did not return a MIME type.')
+      return nil
     end
 
     -- If we got here, then the transformation went ok and `img` contains
