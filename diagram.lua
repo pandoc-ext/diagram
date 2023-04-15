@@ -16,11 +16,31 @@ PANDOC_VERSION:must_be_at_least '3.0'
 
 local system = require 'pandoc.system'
 local utils = require 'pandoc.utils'
-local stringify = function (s)
-  return type(s) == 'string' and s or utils.stringify(s)
-end
+local stringify = utils.stringify
 local with_temporary_directory = system.with_temporary_directory
 local with_working_directory = system.with_working_directory
+
+--- Returns a filter-specific directory in which cache files can be
+--- stored, or nil if no such directory is available.
+local function cachedir ()
+  local cache_home = os.getenv 'XDG_CACHE_HOME'
+  if not cache_home or cache_home == '' then
+    local user_home = system.os == 'windows'
+      and os.getenv 'USERPROFILE'
+      or os.getenv 'HOME'
+
+    if not user_home or user_home == '' then
+      return nil
+    end
+    cache_home = pandoc.path.join{user_home, '.cache'} or nil
+  end
+
+  -- Create filter cache directory
+  return pandoc.path.join{cache_home, 'pandoc-diagram-filter'}
+end
+
+--- Path holding the image cache, or `nil` if the cache is not used.
+local image_cache = nil
 
 --- List of paths that should not be set to any value if the respective
 --- env var is undefined.
@@ -75,6 +95,14 @@ local function configure (meta)
   local conf = meta.diagram or {}
   for name, execpath in pairs(conf.path or {}) do
     path[name] = stringify(execpath)
+  end
+
+  -- cache for image files
+  if conf.cache ~= false then
+    image_cache = conf['cache-dir']
+      and stringify(conf['cache-dir'])
+      or cachedir()
+    pandoc.system.make_directory(image_cache, true)
   end
 end
 
@@ -192,6 +220,12 @@ local function format_accepts_pdf_images (format)
   return format == 'latex' or format == 'context'
 end
 
+local mimetype_for_extension = {
+  pdf = 'application/pdf',
+  png = 'image/png',
+  svg = 'image/svg+xml',
+}
+
 local function extension_for_mimetype (mimetype)
   return
     (mimetype == 'application/pdf' and 'pdf') or
@@ -272,42 +306,74 @@ local function diagram_properties (cb, option_start)
   }
 end
 
+local function get_cached_image (codeblock)
+  for _, ext in ipairs{'svg', 'pdf', 'png'} do
+    local filename = pandoc.sha1(codeblock.text) .. '.' .. ext
+    local imgpath = pandoc.path.join{image_cache, filename}
+    local success, imgdata = pcall(read_file, imgpath)
+    if success then
+      return imgdata, mimetype_for_extension[ext]
+    end
+  end
+  return nil
+end
+
+local function cache_image (codeblock, imgdata, mimetype)
+  -- do nothing if caching is disabled or not possible.
+  if not image_cache then
+    return
+  end
+  local ext = extension_for_mimetype(mimetype)
+  local filename = pandoc.sha1(codeblock.text) .. '.' .. ext
+  local imgpath = pandoc.path.join{image_cache, filename}
+  write_file(imgpath, imgdata)
+end
+
 -- Executes each document's code block to find matching code blocks:
 local function code_to_figure (block)
   -- Check if a converter exists for this block. If not, return the block
   -- unchanged.
   local diagram_type = block.classes[1]
-  local engine, linecomment_start = table.unpack(diagram_engines[diagram_type])
+  local engine, linecomment = table.unpack(diagram_engines[diagram_type])
   if not engine then
     return nil
   end
 
-  -- Call the converter
-  local additional_packages =
-    block.attributes['additional-packages'] or
-    block.attributes["additionalPackages"]
-  local success, img, imgtype = pcall(engine, block.text, additional_packages)
+  -- Try to retrieve the image data from the cache.
+  local img, imgtype = get_cached_image(block)
 
-  -- Bail if an error occured; img contains the error message when that
-  -- happens.
-  if not (success and img) then
-    io.stderr:write(tostring(img or "no image data has been returned."))
-    io.stderr:write('\n')
-    error 'Image conversion failed. Aborting.'
+  if not img or not imgtype then
+    -- No cached image; call the converter
+    local additional_packages =
+      block.attributes['additional-packages'] or
+      block.attributes["additionalPackages"]
+    local success
+    success, img, imgtype = pcall(engine, block.text, additional_packages)
+
+    -- Bail if an error occured; img contains the error message when that
+    -- happens.
+    if not (success and img) then
+      io.stderr:write(tostring(img or "no image data has been returned."))
+      io.stderr:write('\n')
+      error 'Image conversion failed. Aborting.'
+    end
+
+    if not imgtype then
+      error 'MIME-type of image is unknown.'
+    end
+
+    -- If we got here, then the transformation went ok and `img` contains
+    -- the image data.
+    cache_image(block, img, imgtype)
   end
 
-  if not imgtype then
-    error 'MIME-type of image is unknown.'
-  end
-
-  -- If we got here, then the transformation went ok and `img` contains
-  -- the image data.
+  -- Convert SVG if necessary.
   if imgtype == 'application/pdf' and not format_accepts_pdf_images(FORMAT) then
     img, imgtype = pdf2svg(img), 'image/svg+xml'
   end
 
   -- Unified properties.
-  local props = diagram_properties(block, linecomment_start)
+  local props = diagram_properties(block, linecomment)
 
   -- Use the block's filename attribute or create a new name by hashing the
   -- image content.
