@@ -112,18 +112,18 @@ local function configure (meta)
 end
 
 -- Call plantuml.jar with some parameters (cf. PlantUML help):
-local function plantuml(puml, filetype)
+local function plantuml(puml)
   return pandoc.pipe(
     java_path,
-    {"-jar", plantuml_path, "-t" .. filetype, "-pipe", "-charset", "UTF8"},
+    {"-jar", plantuml_path, "-tsvg", "-pipe", "-charset", "UTF8"},
     puml
-  )
+  ), 'image/svg+xml'
 end
 
 -- Call dot (GraphViz) in order to generate the image
 -- (thanks @muxueqz for this code):
 local function graphviz(code, filetype)
-  return pandoc.pipe(dot_path, {"-T" .. filetype}, code)
+  return pandoc.pipe(dot_path, {"-Tsvg"}, code), 'image/svg+xml'
 end
 
 --
@@ -144,6 +144,14 @@ local tikz_template = [[
 \end{document}
 ]]
 
+--- Reads the contents of a file.
+local function read_file (filepath)
+  local fh = io.open(filepath, 'rb')
+  local contents = fh:read('a')
+  fh:close()
+  return contents
+end
+
 --- Writes the contents into a file at the given path.
 local function write_file (filepath, content)
   local fh = io.open(filepath, 'wb')
@@ -153,7 +161,9 @@ end
 
 --- Converts an image file from to a different format. The formats must
 --- be given as MIME types.
-local function convert_image_file (filename, from_mime, to_mime, opts)
+local function convert_image (imgdata, from_mime, to_mime, opts)
+  local pdf_file = os.tmpname() .. '.pdf'
+  write_file(pdf_file, imgdata)
   local args
   if to_mime == 'image/png' then
     args = pandoc.List{'--export-type=png', '--export-dpi=300'}
@@ -163,11 +173,11 @@ local function convert_image_file (filename, from_mime, to_mime, opts)
     return nil
   end
   args:insert('--export-filename=-')
-  args:insert(filename)
-  return pandoc.pipe('inkscape', args, '')
+  args:insert(pdf_file)
+  return pandoc.pipe('inkscape', args, ''), os.remove(pdf_file)
 end
 
---- Compile LaTeX with Tikz code to an image
+--- Compile LaTeX with TikZ code to an image
 local function tikz2image(src, filetype, additional_packages)
   return with_temporary_directory("tikz2image", function (tmpdir)
     return with_working_directory(tmpdir, function ()
@@ -181,7 +191,7 @@ local function tikz2image(src, filetype, additional_packages)
       -- Execute the LaTeX compiler:
       pandoc.pipe(pdflatex_path, {'-output-directory', tmpdir, tikz_file}, '')
 
-      return convert_image_file(pdf_file, 'application/pdf', 'image/svg+xml')
+      return read_file(pdf_file), 'application/pdf'
     end)
   end)
 end
@@ -228,32 +238,33 @@ local function py2image(code, filetype)
   os.remove(pyfile)
   os.remove(outfile)
 
-  return imgData
+  return imgData, 'image/svg+xml'
 end
 
 --
 -- Asymptote
 --
 
-local function asymptote(code, filetype)
-  local mimetype = filetype == 'png'
-    and 'image/png'
-    or 'image/svg+xml'
-  return with_temporary_directory(
-    "asymptote",
-    function(tmpdir)
-      return with_working_directory(
-        tmpdir,
-        function ()
-          local pdf_file = "pandoc_diagram.pdf"
-          pandoc.pipe(
-            asymptote_path,
-            {'-tex', 'pdflatex', "-o", "pandoc_diagram", '-'},
-            code
-          )
-          return convert_image_file(pdf_file, 'application/pdf', mimetype)
-      end)
+local function asymptote(code)
+  return with_temporary_directory("asymptote", function(tmpdir)
+    return with_working_directory(tmpdir, function ()
+      local pdf_file = "pandoc_diagram.pdf"
+      local args = {'-tex', 'pdflatex', "-o", "pandoc_diagram", '-'}
+      pandoc.pipe(asymptote_path, args, code)
+      return read_file(pdf_file), 'application/pdf'
+    end)
   end)
+end
+
+local function format_accepts_pdf_images (format)
+  return format == 'latex' or format == 'context'
+end
+
+local function extension_for_mimetype (mimetype)
+  return
+    (mimetype == 'application/pdf' and 'pdf') or
+    (mimetype == 'image/svg+xml' and 'svg') or
+    (mimetype == 'image/png' and 'png')
 end
 
 -- Executes each document's code block to find matching code blocks:
@@ -275,7 +286,7 @@ local function code_to_figure (block)
   end
 
   -- Call the correct converter which belongs to the used class:
-  local success, img = pcall(img_converter, block.text,
+  local success, img, imgtype = pcall(img_converter, block.text,
       filetype, block.attributes["additionalPackages"] or nil)
 
   -- Bail if an error occured; img contains the error message when that
@@ -286,18 +297,27 @@ local function code_to_figure (block)
     error 'Image conversion failed. Aborting.'
   end
 
+  if not imgtype then
+    error 'MIME-type of image is unknown.'
+  end
+
   -- If we got here, then the transformation went ok and `img` contains
   -- the image data.
+  if imgtype == 'application/pdf' and not format_accepts_pdf_images(FORMAT) then
+    img = convert_image(img, imgtype, 'image/svg+xml')
+    imgtype = 'image/svg+xml'
+  end
 
   -- Use the block's filename attribute or create a new name by hashing the
   -- image content.
   local basename, extension = pandoc.path.split_extension(
     block.attributes.filename or pandoc.sha1(img)
   )
-  local fname = basename .. (extension ~= '' and extension or '.' .. filetype)
+  local fname = basename ..
+    (extension ~= '' and extension or '.' .. extension_for_mimetype(imgtype))
 
   -- Store the data in the media bag:
-  pandoc.mediabag.insert(fname, mimetype, img)
+  pandoc.mediabag.insert(fname, imgtype, img)
 
   local enable_caption = nil
 
