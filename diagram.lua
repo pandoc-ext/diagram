@@ -49,28 +49,6 @@ local path = setmetatable(
   }
 )
 
--- The Python environment's activate script. Can be set on a per document
--- basis by using the meta data key "activatePythonPath".
-local python_activate_path = os.getenv("PYTHON_ACTIVATE")
-
--- The default format is SVG i.e. vector graphics:
-local filetype = "svg"
-local mimetype = "image/svg+xml"
-
--- Check for output formats that potentially cannot use SVG
--- vector graphics. In these cases, we use a different format
--- such as PNG:
-if FORMAT == "docx" then
-  filetype = "png"
-  mimetype = "image/png"
-elseif FORMAT == "pptx" then
-  filetype = "png"
-  mimetype = "image/png"
-elseif FORMAT == "rtf" then
-  filetype = "png"
-  mimetype = "image/png"
-end
-
 -- Execute the meta data table to determine the paths. This function
 -- must be called first to get the desired path. If one of these
 -- meta options was set, it gets used instead of the corresponding
@@ -90,7 +68,7 @@ end
 
 -- Call dot (GraphViz) in order to generate the image
 -- (thanks @muxueqz for this code):
-local function graphviz(code, filetype)
+local function graphviz(code)
   return pandoc.pipe(path['dot'], {"-Tsvg"}, code), 'image/svg+xml'
 end
 
@@ -146,7 +124,7 @@ local function convert_image (imgdata, from_mime, to_mime, opts)
 end
 
 --- Compile LaTeX with TikZ code to an image
-local function tikz2image(src, filetype, additional_packages)
+local function tikz2image(src, additional_packages)
   return with_temporary_directory("tikz2image", function (tmpdir)
     return with_working_directory(tmpdir, function ()
       -- Define file names:
@@ -165,14 +143,11 @@ local function tikz2image(src, filetype, additional_packages)
 end
 
 -- Run Python to generate an image:
-local function py2image(code, filetype)
+local function py2image(code)
 
   -- Define the temp files:
-  local outfile = string.format('%s.%s', os.tmpname(), filetype)
+  local outfile = string.format('%s.%s', os.tmpname())
   local pyfile = os.tmpname()
-
-  -- Replace the desired destination's file type in the Python code:
-  local extendedCode = string.gsub(code, "%$FORMAT%$", filetype)
 
   -- Replace the desired destination's path in the Python code:
   extendedCode = string.gsub(extendedCode, "%$DESTINATION%$", outfile)
@@ -255,7 +230,7 @@ local function code_to_figure (block)
 
   -- Call the correct converter which belongs to the used class:
   local success, img, imgtype = pcall(img_converter, block.text,
-      filetype, block.attributes["additionalPackages"] or nil)
+       block.attributes["additionalPackages"] or nil)
 
   -- Bail if an error occured; img contains the error message when that
   -- happens.
