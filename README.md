@@ -3,7 +3,8 @@ Diagram Generator
 
 This Lua filter is used to create figures from code blocks: images
 are generated from the code with the help of external programs.
-Currently PlantUML, Graphviz, Ti*k*Z and Python can be processed.
+The filter processes diagram code for Asymptote, Graphviz,
+PlantUML, and Ti*k*Z.
 
 
 Usage
@@ -104,4 +105,8 @@ This filter **must not** be used with **untrusted documents**. The
 filter effectively turns the document into a script that can run
 arbitrary commands with the user's permissions. It is hence
 recommended to review any document before using it with this
-filter.
+filter to avoid malicious and misuse of the filter.
+
+The security is improved considerably if the `diagram` metadata
+field is unset or set to a predefined value before this filter is
+called, e.g., via another filter.

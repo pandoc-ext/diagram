@@ -1,9 +1,9 @@
 --[[
 diagram-generator – create images and figures from code blocks.
 
-This Lua filter is used to create images with or without captions
-from code blocks. Currently PlantUML, GraphViz, Tikz, and Python
-can be processed. For further details, see README.md.
+This Lua filter is used to create images with or without captions from
+code blocks. Currently Asymptote, GraphViz, PlantUML, and Tikz can be
+processed. For further details, see README.md.
 
 Copyright: © 2018-2021 John MacFarlane <jgm@berkeley.edu>,
              2018 Florian Schätzig <florian@schaetzig.de>,
@@ -42,11 +42,6 @@ end
 --- Path holding the image cache, or `nil` if the cache is not used.
 local image_cache = nil
 
---- List of paths that should not be set to any value if the respective
---- env var is undefined.
-local path_can_be_nil = {
-  python_activate = true,
-}
 --- Table containing program paths. If the program has no explicit path
 --- set, then the value of the environment variable with the uppercase
 --- name of the program is used when defined. The fallback is to use
@@ -61,9 +56,7 @@ local path = setmetatable(
         os.getenv(key:upper())
 
       if not execpath or execpath == '' then
-        execpath = not path_can_be_nil[key]
-          and key
-          or nil
+        execpath = key
       end
 
       tbl[key] = execpath
@@ -158,49 +151,6 @@ local function tikz (codeblock, additional_packages)
   end)
 end
 
--- Run Python to generate an image:
-local function py2image (codeblock)
-  local code = codeblock.text
-
-  -- Define the temp files:
-  local outfile = string.format('%s.%s', os.tmpname())
-  local pyfile = os.tmpname()
-
-  -- Replace the desired destination's path in the Python code:
-  extendedCode = string.gsub(extendedCode, "%$DESTINATION%$", outfile)
-
-  -- Write the Python code:
-  local f = io.open(pyfile, 'w')
-  f:write(extendedCode)
-  f:close()
-
-  -- Execute Python in the desired environment:
-  local pycmd = path['python'] .. ' ' .. pyfile
-  local command = path['python_activate']
-    and python_activate_path .. ' && ' .. pycmd
-    or pycmd
-  os.execute(command)
-
-  -- Try to open the written image:
-  local r = io.open(outfile, 'rb')
-  local imgData = nil
-
-  -- When the image exist, read it:
-  if r then
-    imgData = r:read("*all")
-    r:close()
-  else
-    io.stderr:write(string.format("File '%s' could not be opened", outfile))
-    error 'Could not create image from python code.'
-  end
-
-  -- Delete the tmp files:
-  os.remove(pyfile)
-  os.remove(outfile)
-
-  return imgData, 'image/svg+xml'
-end
-
 --
 -- Asymptote
 --
@@ -259,7 +209,6 @@ local diagram_engines = setmetatable(
     dot       = {graphviz, '//'},
     graphviz  = {graphviz, '//'},
     plantuml  = {plantuml, "'"},
-    py2image  = {py2image, '#'},
     tikz      = {tikz, '%%'},
   },
   {
