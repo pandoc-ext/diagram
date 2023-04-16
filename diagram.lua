@@ -313,10 +313,12 @@ local function code_to_figure (block)
     return nil
   end
 
-  local engine, linecomment = table.unpack(diagram_engines[diagram_type])
-  if not engine then
+  local engine_def = diagram_engines[diagram_type]
+  if not engine_def then
     return nil
   end
+
+  local engine, linecomment = table.unpack(engine_def)
 
   -- Unified properties.
   local props = diagram_properties(block, linecomment)
