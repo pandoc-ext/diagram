@@ -1,10 +1,6 @@
 --[[
 diagram-generator – create images and figures from code blocks.
 
-This Lua filter is used to create images with or without captions from
-code blocks. Currently Asymptote, GraphViz, PlantUML, and Tikz can be
-processed. For further details, see README.md.
-
 Copyright: © 2018-2021 John MacFarlane <jgm@berkeley.edu>,
              2018 Florian Schätzig <florian@schaetzig.de>,
              2019 Thorsten Sommer <contact@sommer-engineering.com>,
@@ -112,6 +108,21 @@ local function graphviz(code)
 end
 
 --
+-- Mermaid
+--
+local function mermaid (code)
+  return with_temporary_directory("diagram", function (tmpdir)
+    return with_working_directory(tmpdir, function ()
+      local infile = 'diagram.mmd'
+      local outfile = 'diagram.svg'
+      write_file(infile, code)
+      pandoc.pipe(path['mmdc'], {'--input', infile, '--output', outfile}, '')
+      return read_file(outfile), 'image/svg+xml'
+    end)
+  end)
+end
+
+--
 -- TikZ
 --
 
@@ -205,6 +216,7 @@ local diagram_engines = setmetatable(
     asymptote = {asymptote, '%%'},
     dot       = {graphviz, '//'},
     graphviz  = {graphviz, '//'},
+    mermaid   = {mermaid, '%%'},
     plantuml  = {plantuml, "'"},
     tikz      = {tikz, '%%'},
   },

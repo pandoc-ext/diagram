@@ -69,6 +69,38 @@ jobs:
       - name: Test
         run: 'make test-dot'
 
+  Mermaid:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        pandoc:
+          - latest
+
+    container:
+      image: pandoc/core:${{ matrix.pandoc }}
+
+    env:
+      MMDC: /usr/local/bin/mmdc-test
+      PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Install dependencies
+        ## We need a little hack to get puppeteer working in the container.
+        run: |
+          apk update && apk add chromium chromium-chromedriver make npm
+          npm install -g @mermaid-js/mermaid-cli
+          printf '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' > \
+              /etc/puppeteer-conf.json
+          printf '#!/bin/sh\nmmdc -p /etc/puppeteer-conf.json $@' > $MMDC
+          chmod +x $MMDC
+
+      - name: Test
+        run: 'make test-mermaid'
+
   PlantUML:
     runs-on: ubuntu-latest
     strategy:

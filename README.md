@@ -4,7 +4,7 @@ Diagram Generator
 This Lua filter is used to create figures from code blocks: images
 are generated from the code with the help of external programs.
 The filter processes diagram code for Asymptote, Graphviz,
-PlantUML, and Ti*k*Z.
+Mermaid, PlantUML, and Ti*k*Z.
 
 
 Usage
@@ -53,6 +53,7 @@ that can be used to specify a specific executable.
 |-------------|-------------------|------------|-----------------------|
 | [Asymptote] | `asymptote`       | `asy`      | `ASYMPTOTE`, `ASY`    |
 | [GraphViz]  | `graphviz`, `dot` | `dot`      | `DOT`                 |
+| [Mermaid]   | `mermaid`         | `mmdc`     | `mmdc`                |
 | [PlantUML]  | `plantuml`        | `plantuml` | `PLANTUML`            |
 | [Ti*k*Z]    | `tikz`            | `pdflatex` | `PDFLATEX`            |
 
@@ -67,6 +68,7 @@ will be returned unchanged.
 
 [Asymptote]: https://asymptote.sourceforge.io/
 [GraphViz]: https://www.graphviz.org/
+[Mermaid]: https://mermaid.js.org/
 [PlantUML]: https://plantuml.org/
 [Ti*k*Z]: https://en.wikipedia.org/wiki/PGF/TikZ
 
