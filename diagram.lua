@@ -10,6 +10,11 @@ License:   MIT – see LICENSE file for details
 -- Module pandoc.system is required and was added in version 2.7.3
 PANDOC_VERSION:must_be_at_least '3.0'
 
+-- Version 3.1.2 reports Lua warnings via pandoc's reporting system.
+if PANDOC_VERSION < '3.1.2' then
+  warn '@on'
+end
+
 local system = require 'pandoc.system'
 local utils = require 'pandoc.utils'
 local stringify = utils.stringify
