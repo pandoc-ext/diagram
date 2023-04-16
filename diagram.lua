@@ -100,16 +100,14 @@ local function configure (meta)
 end
 
 -- Call plantuml with some parameters (cf. PlantUML help):
-local function plantuml (cb)
-  local puml = cb.text
+local function plantuml(puml)
   local args = {"-tsvg", "-pipe", "-charset", "UTF8"}
   return pandoc.pipe(path['plantuml'], args, puml), 'image/svg+xml'
 end
 
 -- Call dot (GraphViz) in order to generate the image
 -- (thanks @muxueqz for this code):
-local function graphviz (cb)
-  local code = cb.text
+local function graphviz(code)
   return pandoc.pipe(path['dot'], {"-Tsvg"}, code), 'image/svg+xml'
 end
 
@@ -132,8 +130,7 @@ local tikz_template = [[
 ]]
 
 --- Compile LaTeX with TikZ code to an image
-local function tikz (codeblock, additional_packages)
-  local src = codeblock.text
+local function tikz(src, additional_packages)
   return with_temporary_directory("tikz2image", function (tmpdir)
     return with_working_directory(tmpdir, function ()
       -- Define file names:
@@ -155,8 +152,7 @@ end
 -- Asymptote
 --
 
-local function asymptote(codeblock)
-  local code = codeblock.text
+local function asymptote(code)
   return with_temporary_directory("asymptote", function(tmpdir)
     return with_working_directory(tmpdir, function ()
       local pdf_file = "pandoc_diagram.pdf"
@@ -321,7 +317,7 @@ local function code_to_figure (block)
       block.attributes['additional-packages'] or
       block.attributes["additionalPackages"]
     local success
-    success, img, imgtype = pcall(engine, block, additional_packages)
+    success, img, imgtype = pcall(engine, block.text, additional_packages)
 
     -- Bail if an error occured; img contains the error message when that
     -- happens.
