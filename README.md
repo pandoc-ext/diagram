@@ -70,6 +70,23 @@ will be returned unchanged.
 [PlantUML]: https://plantuml.org/
 [Ti*k*Z]: https://en.wikipedia.org/wiki/PGF/TikZ
 
+Figure options
+--------------
+
+Options can be given using the syntax pioneered by [Quarto]:
+
+````
+``` {.dot}
+//| label: fig-boring
+//| fig-cap: "A boring Graphviz graph."
+digraph boring {
+  A -> B;
+}
+```
+````
+
+[Quarto]: https://quarto.org/
+
 Configuration
 -------------
 
