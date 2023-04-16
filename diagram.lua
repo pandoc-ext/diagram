@@ -130,14 +130,15 @@ local tikz_template = [[
 ]]
 
 --- Compile LaTeX with TikZ code to an image
-local function tikz(src, additional_packages)
+local function tikz(src, opt)
   return with_temporary_directory("tikz2image", function (tmpdir)
     return with_working_directory(tmpdir, function ()
+      local pkgs = opt['additional-packages'] or ''
       -- Define file names:
       local file_template = "%s/tikz-image.%s"
       local tikz_file = file_template:format(tmpdir, "tex")
       local pdf_file = file_template:format(tmpdir, "pdf")
-      local tex_code = tikz_template:format(additional_packages or '', src)
+      local tex_code = tikz_template:format(pkgs, src)
       write_file(tikz_file, tex_code)
 
       -- Execute the LaTeX compiler:
@@ -236,9 +237,9 @@ local function properties_from_code (code, comment_start)
   return props
 end
 
-local function diagram_properties (cb, option_start)
-  local attribs = option_start
-    and properties_from_code(cb.text, option_start)
+local function diagram_properties (cb, comment_start)
+  local attribs = comment_start
+    and properties_from_code(cb.text, comment_start)
     or {}
   for key, value in pairs(cb.attributes) do
     attribs[key] = value
@@ -252,12 +253,17 @@ local function diagram_properties (cb, option_start)
     id = cb.identifier ~= '' and cb.identifier or attribs.label,
     name = attribs.name,
   }
+  local engine_opt = {}
+
   for k, v in pairs(attribs) do
-    local key = k:match '^fig%-(%a%w*)$'
-    if key then
+    local prefix, key = k:match '^(%a+)%-(%a[-%w]*)$'
+    if prefix == 'fig' then
       fig_attr[key] = v
+    elseif prefix == 'opt' then
+      engine_opt[key] = v
     end
   end
+
   return {
     ['alt'] = pandoc.utils.blocks_to_inlines(caption),
     ['caption'] = caption,
@@ -268,6 +274,7 @@ local function diagram_properties (cb, option_start)
       width = attribs.width,
       style = attribs.style,
     },
+    ['opt'] = engine_opt,
   }
 end
 
@@ -311,21 +318,21 @@ local function code_to_figure (block)
     return nil
   end
 
+  -- Unified properties.
+  local props = diagram_properties(block, linecomment)
+
   -- Try to retrieve the image data from the cache.
   local img, imgtype = get_cached_image(pandoc.sha1(block.text))
 
   if not img or not imgtype then
     -- No cached image; call the converter
-    local additional_packages =
-      block.attributes['additional-packages'] or
-      block.attributes["additionalPackages"]
     local success
-    success, img, imgtype = pcall(engine, block.text, additional_packages)
+    success, img, imgtype = pcall(engine, block.text, props.opt)
 
     -- Bail if an error occured; img contains the error message when that
     -- happens.
     if not success then
-      warn(PANDOC_SCRIPT_FILE, img)
+      warn(PANDOC_SCRIPT_FILE, ': ', tostring(img))
       return nil
     elseif not img then
       warn(PANDOC_SCRIPT_FILE, 'Diagram engine returned no image data.')
@@ -344,9 +351,6 @@ local function code_to_figure (block)
   if imgtype == 'application/pdf' and not format_accepts_pdf_images(FORMAT) then
     img, imgtype = pdf2svg(img), 'image/svg+xml'
   end
-
-  -- Unified properties.
-  local props = diagram_properties(block, linecomment)
 
   -- Use the block's filename attribute or create a new name by hashing the
   -- image content.

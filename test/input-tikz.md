@@ -4,9 +4,10 @@ Example usage from [TikZ
 examples](http://www.texample.net/tikz/examples/parallelepiped/) by
 [Kjell Magne Fauske](http://www.texample.net/tikz/examples/nav1d/):
 
-```{.tikz caption="Tetrahedron inscribed in a parallelepiped."
-     filename="parallelepiped"
-     additionalPackages="\usepackage{adjustbox}"}
+```{.tikz
+    caption="Tetrahedron inscribed in a parallelepiped."
+    filename="parallelepiped"
+    opt-additional-packages="\usepackage{adjustbox}"}
 \usetikzlibrary{arrows}
 \tikzstyle{int}=[draw, fill=blue!20, minimum size=2em]
 \tikzstyle{init} = [pin edge={to-,thin,black}]
