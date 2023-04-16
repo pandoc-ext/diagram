@@ -4,5 +4,7 @@ filters:
 to: html
 metadata:
   pagetitle: TikZ diagram
+  diagram:
+    cache: false
 variables:
   document-css: false

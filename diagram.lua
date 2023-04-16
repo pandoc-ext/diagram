@@ -271,9 +271,12 @@ local function diagram_properties (cb, option_start)
   }
 end
 
-local function get_cached_image (codeblock)
+local function get_cached_image (hash)
+  if not image_cache then
+    return nil
+  end
   for _, ext in ipairs{'pdf', 'svg', 'png'} do
-    local filename = pandoc.sha1(codeblock.text) .. '.' .. ext
+    local filename = hash .. '.' .. ext
     local imgpath = pandoc.path.join{image_cache, filename}
     local success, imgdata = pcall(read_file, imgpath)
     if success then
@@ -309,7 +312,7 @@ local function code_to_figure (block)
   end
 
   -- Try to retrieve the image data from the cache.
-  local img, imgtype = get_cached_image(block)
+  local img, imgtype = get_cached_image(pandoc.sha1(block.text))
 
   if not img or not imgtype then
     -- No cached image; call the converter

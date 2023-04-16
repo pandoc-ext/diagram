@@ -4,5 +4,7 @@ filters:
 to: html
 metadata:
   pagetitle: plantuml diagram
+  diagram:
+    cache: false
 variables:
   document-css: false
