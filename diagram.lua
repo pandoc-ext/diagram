@@ -116,13 +116,29 @@ end
 -- Mermaid
 --
 local function mermaid (code)
+  -- due to a bug (?) in mermaid (see https://github.com/mermaid-js/mermaid-cli/issues/112)
+  -- svg output have been switched to pdf output
+  -- -f flag has been added (only affects pdf output) to adapt the page size to the diagram.
+  -- mermaid bug does not affect all text : text in gitGraph is OK. But labels on graph are not.
+  -- test with the following code and see if integers are visible.
+  -- ```{.mermaid #fig:samtree01 caption="Sample Tree"}
+  -- graph TB;
+  -- A((10))-->B((3))
+  -- A-->C((12));
+  -- B-->E((1))
+  -- B-->F((7))
+  -- C-->H((11))
+  -- C-->I((4))
+  -- ```
   return with_temporary_directory("diagram", function (tmpdir)
     return with_working_directory(tmpdir, function ()
       local infile = 'diagram.mmd'
-      local outfile = 'diagram.svg'
+      -- local outfile = 'diagram.svg'
+      local outfile = 'diagram.pdf'
       write_file(infile, code)
-      pandoc.pipe(path['mmdc'], {'--input', infile, '--output', outfile}, '')
-      return read_file(outfile), 'image/svg+xml'
+      pandoc.pipe(path['mmdc'], {'-f', '--input', infile, '--output', outfile}, '')
+      -- return read_file(outfile), 'image/svg+xml'
+      return read_file(outfile), 'application/pdf'
     end)
   end)
 end

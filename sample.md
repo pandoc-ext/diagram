@@ -270,6 +270,36 @@ label("$O$", O, W);
 label("$I$", I, E);
 ```
 
+## Mermaid
+[Mermaid](https://mermaid.js.org/#/) is a diagramming and charting tool.
+[mmdc](https://github.com/mermaid-js/mermaid-cli) is a cli to mermaid.
+Your distribution may have a package called `mermaid-cli` or `mmdc`.
+
+```{.mermaid caption="Sample git graph, created by **mermaid**."}
+gitGraph
+    commit
+    commit
+    branch develop
+    checkout develop
+    commit
+    commit
+    checkout main
+    merge develop
+    commit
+    commit
+```
+
+```{.mermaid #fig:samtree01 caption="Sample Tree"}
+graph TB;
+A((10))-->B((3))
+A-->C((12));
+B-->E((1))
+B-->F((7))
+C-->H((11))
+C-->I((4))
+```
+
+
 ## How to run pandoc
 This section will show, how to call Pandoc in order to use this filter with
 meta keys. The following command assume, that the filters are stored in the
