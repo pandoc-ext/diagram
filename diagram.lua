@@ -114,7 +114,7 @@ end
 
 -- Call plantuml with some parameters (cf. PlantUML help):
 local plantuml = {
-  line_comment_start =  "'",
+  line_comment_start =  [[']],
   supported_mime_types = {
     ['image/svg+xml'] = true,
   },
@@ -160,21 +160,23 @@ local graphviz = {
 local mermaid = {
   line_comment_start = '%%',
   supported_mime_types = {
-    -- PDF output is too big and thus not enabled.
-    -- ['application/pdf'] = true,
+    ['application/pdf'] = true,
     ['image/svg+xml'] = true,
     ['image/png'] = true,
   },
   compile = function (code, mime_type)
     mime_type = mime_type or 'image/svg+xml'
     local file_extension = extension_for_mimetype[mime_type]
-    assert(file_extension, "No file extension for MIME type " .. mime_type)
     return with_temporary_directory("diagram", function (tmpdir)
       return with_working_directory(tmpdir, function ()
         local infile = 'diagram.mmd'
         local outfile = 'diagram.' .. file_extension
         write_file(infile, code)
-        pandoc.pipe(path['mmdc'], {'--input', infile, '--output', outfile}, '')
+        pandoc.pipe(
+          path['mmdc'],
+          {"--pdfFit", "--input", infile, "--output", outfile},
+          ''
+        )
         return read_file(outfile), mime_type
       end)
     end)
