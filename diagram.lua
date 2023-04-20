@@ -66,6 +66,18 @@ local path = setmetatable(
   }
 )
 
+local mimetype_for_extension = {
+  pdf = 'application/pdf',
+  png = 'image/png',
+  svg = 'image/svg+xml',
+}
+
+local extension_for_mimetype = {
+  ['application/pdf'] = 'pdf',
+  ['image/svg+xml'] = 'svg',
+  ['image/png'] = 'png'
+}
+
 --- Reads the contents of a file.
 local function read_file (filepath)
   local fh = io.open(filepath, 'rb')
@@ -159,7 +171,7 @@ local tikz = {
   line_comment_start = '%%',
 
   --- Compile LaTeX with TikZ code to an image
-  compile = function (src, user_opts)
+  compile = function (src, image_type, user_opts)
     return with_temporary_directory("tikz", function (tmpdir)
       return with_working_directory(tmpdir, function ()
         local pkgs = user_opts['additional-packages'] or ''
@@ -189,13 +201,13 @@ local tikz = {
 
 local asymptote = {
   line_comment_start = '%%',
-  compile = function (code)
+  compile = function (code, mime_type)
     return with_temporary_directory("asymptote", function(tmpdir)
       return with_working_directory(tmpdir, function ()
         local pdf_file = "pandoc_diagram.pdf"
         local args = {'-tex', 'pdflatex', "-o", "pandoc_diagram", '-'}
         pandoc.pipe(path['asy'], args, code)
-        return read_file(pdf_file), 'application/pdf'
+        return read_file(pdf_file), (mime_type or 'application/pdf')
       end)
     end)
   end,
@@ -204,23 +216,6 @@ local asymptote = {
 --
 -- Common code to convert code to a figure.
 --
-
-local function format_accepts_pdf_images (format)
-  return format == 'latex' or format == 'context'
-end
-
-local mimetype_for_extension = {
-  pdf = 'application/pdf',
-  png = 'image/png',
-  svg = 'image/svg+xml',
-}
-
-local function extension_for_mimetype (mimetype)
-  return
-    (mimetype == 'application/pdf' and 'pdf') or
-    (mimetype == 'image/svg+xml' and 'svg') or
-    (mimetype == 'image/png' and 'png')
-end
 
 --- Converts a PDF to SVG.
 local pdf2svg = function (imgdata)
@@ -336,10 +331,15 @@ local function cache_image (codeblock, imgdata, mimetype)
   if not image_cache then
     return
   end
-  local ext = extension_for_mimetype(mimetype)
+  local ext = extension_for_mimetype[mimetype]
   local filename = pandoc.sha1(codeblock.text) .. '.' .. ext
   local imgpath = pandoc.path.join{image_cache, filename}
   write_file(imgpath, imgdata)
+end
+
+local preferred_mime_types = pandoc.List{'image/svg+xml', 'image/png'}
+if (FORMAT == 'latex' or FORMAT == 'context') then
+  preferred_mime_types = pandoc.List{'application/pdf', 'image/png'}
 end
 
 -- Executes each document's code block to find matching code blocks:
@@ -359,13 +359,20 @@ local function code_to_figure (block)
   -- Unified properties.
   local props = diagram_properties(block, engine.line_comment_start)
 
+  local mime_type = preferred_mime_types:find_if(function (imgfmt)
+      return (engine.supported_mime_types or {})[imgfmt]
+  end)
+  local file_extension = extension_for_mimetype[mimetype]
+
   -- Try to retrieve the image data from the cache.
   local img, imgtype = get_cached_image(pandoc.sha1(block.text))
 
   if not img or not imgtype then
     -- No cached image; call the converter
     local success
-    success, img, imgtype = pcall(engine.compile, block.text, props.opt)
+    local user_opts = props.opt
+    success, img, imgtype =
+      pcall(engine.compile, block.text, mime_type, user_opts)
 
     -- Bail if an error occured; img contains the error message when that
     -- happens.
@@ -386,7 +393,7 @@ local function code_to_figure (block)
   end
 
   -- Convert SVG if necessary.
-  if imgtype == 'application/pdf' and not format_accepts_pdf_images(FORMAT) then
+  if imgtype == 'application/pdf' and not preferred_mime_types[imgtype] then
     img, imgtype = pdf2svg(img), 'image/svg+xml'
   end
 
@@ -395,7 +402,7 @@ local function code_to_figure (block)
   local basename, _extension = pandoc.path.split_extension(
     props.filename or pandoc.sha1(img)
   )
-  local fname = basename .. '.' .. extension_for_mimetype(imgtype)
+  local fname = basename .. '.' .. extension_for_mimetype[imgtype]
 
   -- Store the data in the media bag:
   pandoc.mediabag.insert(fname, imgtype, img)
