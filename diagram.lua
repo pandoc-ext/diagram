@@ -101,31 +101,40 @@ local function configure (meta)
 end
 
 -- Call plantuml with some parameters (cf. PlantUML help):
-local function plantuml(puml)
-  local args = {"-tsvg", "-pipe", "-charset", "UTF8"}
-  return pandoc.pipe(path['plantuml'], args, puml), 'image/svg+xml'
-end
+local plantuml = {
+  line_comment_start =  "'",
+  compile = function (puml)
+    local args = {"-tsvg", "-pipe", "-charset", "UTF8"}
+    return pandoc.pipe(path['plantuml'], args, puml), 'image/svg+xml'
+  end,
+}
 
 -- Call dot (GraphViz) in order to generate the image
 -- (thanks @muxueqz for this code):
-local function graphviz(code)
-  return pandoc.pipe(path['dot'], {"-Tsvg"}, code), 'image/svg+xml'
-end
+local graphviz = {
+  line_comment_start = '//',
+  compile = function (code)
+    return pandoc.pipe(path['dot'], {"-Tsvg"}, code), 'image/svg+xml'
+  end,
+}
 
 --
 -- Mermaid
 --
-local function mermaid (code)
-  return with_temporary_directory("diagram", function (tmpdir)
-    return with_working_directory(tmpdir, function ()
-      local infile = 'diagram.mmd'
-      local outfile = 'diagram.svg'
-      write_file(infile, code)
-      pandoc.pipe(path['mmdc'], {'--input', infile, '--output', outfile}, '')
-      return read_file(outfile), 'image/svg+xml'
+local mermaid = {
+  line_comment_start = '%%',
+  compile = function (code)
+    return with_temporary_directory("diagram", function (tmpdir)
+      return with_working_directory(tmpdir, function ()
+        local infile = 'diagram.mmd'
+        local outfile = 'diagram.svg'
+        write_file(infile, code)
+        pandoc.pipe(path['mmdc'], {'--input', infile, '--output', outfile}, '')
+        return read_file(outfile), 'image/svg+xml'
+      end)
     end)
-  end)
-end
+  end,
+}
 
 --
 -- TikZ
@@ -146,39 +155,51 @@ local tikz_template = [[
 ]]
 
 --- Compile LaTeX with TikZ code to an image
-local function tikz(src, opt)
-  return with_temporary_directory("tikz2image", function (tmpdir)
-    return with_working_directory(tmpdir, function ()
-      local pkgs = opt['additional-packages'] or ''
-      -- Define file names:
-      local file_template = "%s/tikz-image.%s"
-      local tikz_file = file_template:format(tmpdir, "tex")
-      local pdf_file = file_template:format(tmpdir, "pdf")
-      local tex_code = tikz_template:format(pkgs, src)
-      write_file(tikz_file, tex_code)
+local tikz = {
+  line_comment_start = '%%',
 
-      -- Execute the LaTeX compiler:
-      pandoc.pipe(path['pdflatex'], {'-output-directory', tmpdir, tikz_file}, '')
+  --- Compile LaTeX with TikZ code to an image
+  compile = function (src, user_opts)
+    return with_temporary_directory("tikz", function (tmpdir)
+      return with_working_directory(tmpdir, function ()
+        local pkgs = user_opts['additional-packages'] or ''
+        -- Define file names:
+        local file_template = "%s/tikz-image.%s"
+        local tikz_file = file_template:format(tmpdir, "tex")
+        local pdf_file = file_template:format(tmpdir, "pdf")
+        local tex_code = tikz_template:format(pkgs, src)
+        write_file(tikz_file, tex_code)
 
-      return read_file(pdf_file), 'application/pdf'
+        -- Execute the LaTeX compiler:
+        pandoc.pipe(
+          path['pdflatex'],
+          {'-output-directory', tmpdir, tikz_file},
+          ''
+        )
+
+        return read_file(pdf_file), 'application/pdf'
+      end)
     end)
-  end)
-end
+  end
+}
 
 --
 -- Asymptote
 --
 
-local function asymptote(code)
-  return with_temporary_directory("asymptote", function(tmpdir)
-    return with_working_directory(tmpdir, function ()
-      local pdf_file = "pandoc_diagram.pdf"
-      local args = {'-tex', 'pdflatex', "-o", "pandoc_diagram", '-'}
-      pandoc.pipe(path['asy'], args, code)
-      return read_file(pdf_file), 'application/pdf'
+local asymptote = {
+  line_comment_start = '%%',
+  compile = function (code)
+    return with_temporary_directory("asymptote", function(tmpdir)
+      return with_working_directory(tmpdir, function ()
+        local pdf_file = "pandoc_diagram.pdf"
+        local args = {'-tex', 'pdflatex', "-o", "pandoc_diagram", '-'}
+        pandoc.pipe(path['asy'], args, code)
+        return read_file(pdf_file), 'application/pdf'
+      end)
     end)
-  end)
-end
+  end,
+}
 
 --
 -- Common code to convert code to a figure.
@@ -218,12 +239,12 @@ end
 --- to the converter functions.
 local diagram_engines = setmetatable(
   {
-    asymptote = {asymptote, '%%'},
-    dot       = {graphviz, '//'},
-    graphviz  = {graphviz, '//'},
-    mermaid   = {mermaid, '%%'},
-    plantuml  = {plantuml, "'"},
-    tikz      = {tikz, '%%'},
+    asymptote = asymptote,
+    dot       = graphviz,
+    graphviz  = graphviz,
+    mermaid   = mermaid,
+    plantuml  = plantuml,
+    tikz      = tikz,
   },
   {
     __index = function (tbl, diagtype)
@@ -330,15 +351,13 @@ local function code_to_figure (block)
     return nil
   end
 
-  local engine_def = diagram_engines[diagram_type]
-  if not engine_def then
+  local engine = diagram_engines[diagram_type]
+  if not engine then
     return nil
   end
 
-  local engine, linecomment = table.unpack(engine_def)
-
   -- Unified properties.
-  local props = diagram_properties(block, linecomment)
+  local props = diagram_properties(block, engine.line_comment_start)
 
   -- Try to retrieve the image data from the cache.
   local img, imgtype = get_cached_image(pandoc.sha1(block.text))
@@ -346,7 +365,7 @@ local function code_to_figure (block)
   if not img or not imgtype then
     -- No cached image; call the converter
     local success
-    success, img, imgtype = pcall(engine, block.text, props.opt)
+    success, img, imgtype = pcall(engine.compile, block.text, props.opt)
 
     -- Bail if an error occured; img contains the error message when that
     -- happens.
