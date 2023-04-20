@@ -104,7 +104,7 @@ local function configure (meta)
   end
 
   -- cache for image files
-  if conf.cache ~= false then
+  if conf.cache then
     image_cache = conf['cache-dir']
       and stringify(conf['cache-dir'])
       or cachedir()

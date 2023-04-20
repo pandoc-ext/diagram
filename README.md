@@ -104,7 +104,7 @@ Currently supported options:
 
 - `cache`: controls whether the images are cached. If the cache is
   enabled, then the images are recreated only when their code
-  changes. This option is *enabled* by default.
+  changes. This option is *disabled* by default.
 
 - `cache-dir`: Sets the directory in which the images are cached.
   The default is to use the `pandoc-diagram-filter` subdir of the
