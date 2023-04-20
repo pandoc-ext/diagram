@@ -115,9 +115,22 @@ end
 -- Call plantuml with some parameters (cf. PlantUML help):
 local plantuml = {
   line_comment_start =  "'",
-  compile = function (puml)
-    local args = {"-tsvg", "-pipe", "-charset", "UTF8"}
-    return pandoc.pipe(path['plantuml'], args, puml), 'image/svg+xml'
+  supported_mime_types = {
+    ['image/svg+xml'] = true,
+  },
+  compile = function (puml, mime_type)
+    mime_type = mime_type or 'image/svg+xml'
+    local formats = {
+        ['image/svg+xml'] = 'svg',
+        ['image/png'] = 'png',
+        ['application/pdf'] = 'pdf',
+    }
+    local format = formats[mime_type]
+    if not format then
+      format, mime_type = 'svg', 'image/svg+xml'
+    end
+    local args = {'-t' .. format, "-pipe", "-charset", "UTF8"}
+    return pandoc.pipe(path['plantuml'], args, puml), mime_type
   end,
 }
 
@@ -125,8 +138,19 @@ local plantuml = {
 -- (thanks @muxueqz for this code):
 local graphviz = {
   line_comment_start = '//',
-  compile = function (code)
-    return pandoc.pipe(path['dot'], {"-Tsvg"}, code), 'image/svg+xml'
+  compile = function (code, mime_type)
+    mime_type = mime_type or 'image/svg+xml'
+    local formats = {
+      ['image/svg+xml'] = 'svg',
+      ['application/pdf'] = 'pdf',
+      ['image/jpeg'] = 'jpg',
+      ['image/png'] = 'png',
+    }
+    local format = formats[mime_type]
+    if not format then
+      format, mime_type = 'svg', 'image/svg+xml'
+    end
+    return pandoc.pipe(path['dot'], {"-T"..format}, code), mime_type
   end,
 }
 
@@ -135,14 +159,23 @@ local graphviz = {
 --
 local mermaid = {
   line_comment_start = '%%',
-  compile = function (code)
+  supported_mime_types = {
+    -- PDF output is too big and thus not enabled.
+    -- ['application/pdf'] = true,
+    ['image/svg+xml'] = true,
+    ['image/png'] = true,
+  },
+  compile = function (code, mime_type)
+    mime_type = mime_type or 'image/svg+xml'
+    local file_extension = extension_for_mimetype[mime_type]
+    assert(file_extension, "No file extension for MIME type " .. mime_type)
     return with_temporary_directory("diagram", function (tmpdir)
       return with_working_directory(tmpdir, function ()
         local infile = 'diagram.mmd'
-        local outfile = 'diagram.svg'
+        local outfile = 'diagram.' .. file_extension
         write_file(infile, code)
         pandoc.pipe(path['mmdc'], {'--input', infile, '--output', outfile}, '')
-        return read_file(outfile), 'image/svg+xml'
+        return read_file(outfile), mime_type
       end)
     end)
   end,
@@ -170,8 +203,12 @@ local tikz_template = [[
 local tikz = {
   line_comment_start = '%%',
 
+  supported_mime_types = {
+    ['application/pdf'] = true,
+  },
+
   --- Compile LaTeX with TikZ code to an image
-  compile = function (src, image_type, user_opts)
+  compile = function (src, mime_type, user_opts)
     return with_temporary_directory("tikz", function (tmpdir)
       return with_working_directory(tmpdir, function ()
         local pkgs = user_opts['additional-packages'] or ''
@@ -189,6 +226,7 @@ local tikz = {
           ''
         )
 
+        -- ignore the passed MIME type; always return PDF output
         return read_file(pdf_file), 'application/pdf'
       end)
     end)
@@ -359,10 +397,10 @@ local function code_to_figure (block)
   -- Unified properties.
   local props = diagram_properties(block, engine.line_comment_start)
 
-  local mime_type = preferred_mime_types:find_if(function (imgfmt)
-      return (engine.supported_mime_types or {})[imgfmt]
+  local supported_mime_types = engine.supported_mime_types or {}
+  local preferred_mime_type = preferred_mime_types:find_if(function (pref)
+      return supported_mime_types[pref]
   end)
-  local file_extension = extension_for_mimetype[mimetype]
 
   -- Try to retrieve the image data from the cache.
   local img, imgtype = get_cached_image(pandoc.sha1(block.text))
@@ -372,7 +410,7 @@ local function code_to_figure (block)
     local success
     local user_opts = props.opt
     success, img, imgtype =
-      pcall(engine.compile, block.text, mime_type, user_opts)
+      pcall(engine.compile, block.text, preferred_mime_type, user_opts)
 
     -- Bail if an error occured; img contains the error message when that
     -- happens.
