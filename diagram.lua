@@ -116,14 +116,16 @@ end
 local plantuml = {
   line_comment_start =  [[']],
   supported_mime_types = {
+    ['application/pdf'] = true,
+    ['image/png'] = true,
     ['image/svg+xml'] = true,
   },
   compile = function (puml, mime_type)
     mime_type = mime_type or 'image/svg+xml'
     local formats = {
-        ['image/svg+xml'] = 'svg',
-        ['image/png'] = 'png',
-        ['application/pdf'] = 'pdf',
+      ['application/pdf'] = 'pdf',
+      ['image/png'] = 'png',
+      ['image/svg+xml'] = 'svg',
     }
     local format = formats[mime_type]
     if not format then
