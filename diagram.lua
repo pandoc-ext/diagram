@@ -138,7 +138,7 @@ local plantuml = {
     ['image/png'] = true,
     ['image/svg+xml'] = true,
   },
-  compile = function (puml, mime_type, opts)
+  compile = function (puml, mime_type)
     mime_type = mime_type or 'image/svg+xml'
     local formats = {
       ['application/pdf'] = 'pdf',
@@ -415,6 +415,10 @@ local function code_to_figure (conf)
     local props = diagram_properties(block, engine.line_comment_start, conf)
 
     local supported_mime_types = engine.supported_mime_types or {}
+    for mime_type, setting in pairs(engine_opts['mime-types']) do
+      supported_mime_types[mime_type] = setting
+    end
+
     local preferred_mime_type = preferred_mime_types:find_if(function (pref)
         return supported_mime_types[pref]
     end)
