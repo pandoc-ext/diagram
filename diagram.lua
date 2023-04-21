@@ -1,11 +1,7 @@
 --[[
 diagram-generator – create images and figures from code blocks.
 
-Copyright: © 2018-2021 John MacFarlane <jgm@berkeley.edu>,
-             2018 Florian Schätzig <florian@schaetzig.de>,
-             2019 Thorsten Sommer <contact@sommer-engineering.com>,
-             2019-2023 Albert Krewinkel <albert+pandoc@zeitkraut.de>
-License:   MIT – see LICENSE file for details
+See copyright notice in file LICENSE.
 ]]
 -- Module pandoc.system is required and was added in version 2.7.3
 PANDOC_VERSION:must_be_at_least '3.0'
