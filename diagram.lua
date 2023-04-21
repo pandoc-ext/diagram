@@ -93,6 +93,15 @@ local function write_file (filepath, content)
   fh:close()
 end
 
+--- Copy all values of the first tables into the second, overwriting
+--- values.
+local function copy_table_into (adding, amended)
+  for key, value in pairs(adding) do
+    amended[key] = value
+  end
+  return amended
+end
+
 -- Execute the meta data table to determine the paths. This function
 -- must be called first to get the desired path. If one of these
 -- meta options was set, it gets used instead of the corresponding
@@ -110,6 +119,11 @@ local function configure (meta)
       or cachedir()
     pandoc.system.make_directory(image_cache, true)
   end
+
+  -- engine configs
+  conf.engine = conf.engine or {}
+
+  return conf
 end
 
 --
@@ -124,7 +138,7 @@ local plantuml = {
     ['image/png'] = true,
     ['image/svg+xml'] = true,
   },
-  compile = function (puml, mime_type)
+  compile = function (puml, mime_type, opts)
     mime_type = mime_type or 'image/svg+xml'
     local formats = {
       ['application/pdf'] = 'pdf',
@@ -215,7 +229,7 @@ local tikz = {
   compile = function (src, mime_type, user_opts)
     return with_temporary_directory("tikz", function (tmpdir)
       return with_working_directory(tmpdir, function ()
-        local pkgs = user_opts['additional-packages'] or ''
+        local pkgs = stringify(user_opts['additional-packages'] or '')
         -- Define file names:
         local file_template = "%s/tikz-image.%s"
         local tikz_file = file_template:format(tmpdir, "tex")
@@ -382,78 +396,82 @@ if (FORMAT == 'latex' or FORMAT == 'context') then
 end
 
 -- Executes each document's code block to find matching code blocks:
-local function code_to_figure (block)
-  -- Check if a converter exists for this block. If not, return the block
-  -- unchanged.
-  local diagram_type = block.classes[1]
-  if not diagram_type then
-    return nil
-  end
-
-  local engine = diagram_engines[diagram_type]
-  if not engine then
-    return nil
-  end
-
-  -- Unified properties.
-  local props = diagram_properties(block, engine.line_comment_start)
-
-  local supported_mime_types = engine.supported_mime_types or {}
-  local preferred_mime_type = preferred_mime_types:find_if(function (pref)
-      return supported_mime_types[pref]
-  end)
-
-  -- Try to retrieve the image data from the cache.
-  local img, imgtype = get_cached_image(pandoc.sha1(block.text))
-
-  if not img or not imgtype then
-    -- No cached image; call the converter
-    local success
-    local user_opts = props.opt
-    success, img, imgtype =
-      pcall(engine.compile, block.text, preferred_mime_type, user_opts)
-
-    -- Bail if an error occured; img contains the error message when that
-    -- happens.
-    if not success then
-      warn(PANDOC_SCRIPT_FILE, ': ', tostring(img))
-      return nil
-    elseif not img then
-      warn(PANDOC_SCRIPT_FILE, 'Diagram engine returned no image data.')
-      return nil
-    elseif not imgtype then
-      warn(PANDOC_SCRIPT_FILE, 'Diagram engine did not return a MIME type.')
+local function code_to_figure (conf)
+  return function (block)
+    -- Check if a converter exists for this block. If not, return the block
+    -- unchanged.
+    local diagram_type = block.classes[1]
+    if not diagram_type then
       return nil
     end
 
-    -- If we got here, then the transformation went ok and `img` contains
-    -- the image data.
-    cache_image(block, img, imgtype)
+    local engine = diagram_engines[diagram_type]
+    local engine_opts = conf.engine[diagram_type] or {}
+    if not engine then
+      return nil
+    end
+
+    -- Unified properties.
+    local props = diagram_properties(block, engine.line_comment_start, conf)
+
+    local supported_mime_types = engine.supported_mime_types or {}
+    local preferred_mime_type = preferred_mime_types:find_if(function (pref)
+        return supported_mime_types[pref]
+    end)
+
+    -- Try to retrieve the image data from the cache.
+    local img, imgtype = get_cached_image(pandoc.sha1(block.text))
+
+    if not img or not imgtype then
+      -- No cached image; call the converter
+      local success
+      -- Global options take precedence.
+      local user_opts = copy_table_into(engine_opts, props.opt)
+      success, img, imgtype =
+        pcall(engine.compile, block.text, preferred_mime_type, user_opts)
+
+      -- Bail if an error occured; img contains the error message when that
+      -- happens.
+      if not success then
+        warn(PANDOC_SCRIPT_FILE, ': ', tostring(img))
+        return nil
+      elseif not img then
+        warn(PANDOC_SCRIPT_FILE, 'Diagram engine returned no image data.')
+        return nil
+      elseif not imgtype then
+        warn(PANDOC_SCRIPT_FILE, 'Diagram engine did not return a MIME type.')
+        return nil
+      end
+
+      -- If we got here, then the transformation went ok and `img` contains
+      -- the image data.
+      cache_image(block, img, imgtype)
+    end
+
+    -- Convert SVG if necessary.
+    if imgtype == 'application/pdf' and not preferred_mime_types[imgtype] then
+      img, imgtype = pdf2svg(img), 'image/svg+xml'
+    end
+
+    -- Use the block's filename attribute or create a new name by hashing the
+    -- image content.
+    local basename, _extension = pandoc.path.split_extension(
+      props.filename or pandoc.sha1(img)
+    )
+    local fname = basename .. '.' .. extension_for_mimetype[imgtype]
+
+    -- Store the data in the media bag:
+    pandoc.mediabag.insert(fname, imgtype, img)
+
+    -- Create a figure that contains just this image.
+    local img_obj = pandoc.Image(props.alt, fname, "", props['image-attr'])
+    return pandoc.Figure(pandoc.Plain{img_obj}, props.caption, props['fig-attr'])
   end
-
-  -- Convert SVG if necessary.
-  if imgtype == 'application/pdf' and not preferred_mime_types[imgtype] then
-    img, imgtype = pdf2svg(img), 'image/svg+xml'
-  end
-
-  -- Use the block's filename attribute or create a new name by hashing the
-  -- image content.
-  local basename, _extension = pandoc.path.split_extension(
-    props.filename or pandoc.sha1(img)
-  )
-  local fname = basename .. '.' .. extension_for_mimetype[imgtype]
-
-  -- Store the data in the media bag:
-  pandoc.mediabag.insert(fname, imgtype, img)
-
-  -- Create a figure that contains just this image.
-  local img_obj = pandoc.Image(props.alt, fname, "", props['image-attr'])
-  return pandoc.Figure(pandoc.Plain{img_obj}, props.caption, props['fig-attr'])
 end
 
 function Pandoc (doc)
-  configure(doc.meta)
+  local conf = configure(doc.meta)
   return doc:walk {
-    CodeBlock = code_to_figure,
+    CodeBlock = code_to_figure(conf),
   }
 end
