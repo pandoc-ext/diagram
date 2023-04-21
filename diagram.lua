@@ -112,7 +112,11 @@ local function configure (meta)
   end
 end
 
--- Call plantuml with some parameters (cf. PlantUML help):
+--
+-- Diagram Engines
+--
+
+-- PlantUML engine; assumes that there's a `plantuml` binary.
 local plantuml = {
   line_comment_start =  [[']],
   supported_mime_types = {
@@ -136,8 +140,7 @@ local plantuml = {
   end,
 }
 
--- Call dot (GraphViz) in order to generate the image
--- (thanks @muxueqz for this code):
+--- GraphViz engine for the dot language
 local graphviz = {
   line_comment_start = '//',
   compile = function (code, mime_type)
@@ -156,9 +159,7 @@ local graphviz = {
   end,
 }
 
---
--- Mermaid
---
+--- Mermaid engine
 local mermaid = {
   line_comment_start = '%%',
   supported_mime_types = {
@@ -185,8 +186,7 @@ local mermaid = {
   end,
 }
 
---
--- TikZ
+--- TikZ
 --
 
 --- LaTeX template used to compile TikZ images. Takes additional
@@ -203,7 +203,7 @@ local tikz_template = [[
 \end{document}
 ]]
 
---- Compile LaTeX with TikZ code to an image
+--- The TikZ engine uses pdflatex to compile TikZ code to an image
 local tikz = {
   line_comment_start = '%%',
 
@@ -237,10 +237,7 @@ local tikz = {
   end
 }
 
---
--- Asymptote
---
-
+--- Asymptote diagram engine
 local asymptote = {
   line_comment_start = '%%',
   compile = function (code, mime_type)
@@ -254,23 +251,6 @@ local asymptote = {
     end)
   end,
 }
-
---
--- Common code to convert code to a figure.
---
-
---- Converts a PDF to SVG.
-local pdf2svg = function (imgdata)
-  local pdf_file = os.tmpname() .. '.pdf'
-  write_file(pdf_file, imgdata)
-  local args = {
-    '--export-type=svg',
-    '--export-plain-svg',
-    '--export-filename=-',
-    pdf_file
-  }
-  return pandoc.pipe(path['inkscape'], args, ''), os.remove(pdf_file)
-end
 
 --- Table containing mapping from the names of supported diagram engines
 --- to the converter functions.
@@ -297,6 +277,23 @@ local diagram_engines = setmetatable(
     end
   }
 )
+
+--
+-- Format conversion
+--
+
+--- Converts a PDF to SVG.
+local pdf2svg = function (imgdata)
+  local pdf_file = os.tmpname() .. '.pdf'
+  write_file(pdf_file, imgdata)
+  local args = {
+    '--export-type=svg',
+    '--export-plain-svg',
+    '--export-filename=-',
+    pdf_file
+  }
+  return pandoc.pipe(path['inkscape'], args, ''), os.remove(pdf_file)
+end
 
 local function properties_from_code (code, comment_start)
   local props = {}
