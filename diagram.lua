@@ -434,7 +434,7 @@ local function code_to_figure (conf)
       success, img, imgtype =
         pcall(engine.compile, block.text, preferred_mime_type, user_opts)
 
-      -- Bail if an error occured; img contains the error message when that
+      -- Bail if an error occurred; img contains the error message when that
       -- happens.
       if not success then
         warn(PANDOC_SCRIPT_FILE, ': ', tostring(img))
