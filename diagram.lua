@@ -415,7 +415,7 @@ local function code_to_figure (conf)
     local props = diagram_properties(block, engine.line_comment_start, conf)
 
     local supported_mime_types = engine.supported_mime_types or {}
-    for mime_type, setting in pairs(engine_opts['mime-types']) do
+    for mime_type, setting in pairs(engine_opts['mime-types'] or {}) do
       supported_mime_types[mime_type] = setting
     end
 
