@@ -81,7 +81,7 @@ jobs:
       image: pandoc/core:${{ matrix.pandoc }}
 
     env:
-      MMDC_BIN: /usr/local/bin/mmdc-test
+      MERMAID_BIN: /usr/local/bin/mmdc-test
       PUPPETEER_EXECUTABLE_PATH: /usr/bin/chromium-browser
 
     steps:
@@ -95,8 +95,8 @@ jobs:
           npm install -g @mermaid-js/mermaid-cli
           printf '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' > \
               /etc/puppeteer-conf.json
-          printf '#!/bin/sh\nmmdc -p /etc/puppeteer-conf.json $@' > $MMDC_BIN
-          chmod +x $MMDC_BIN
+          printf '#!/bin/sh\nmmdc -p /etc/puppeteer-conf.json $@' > $MERMAID_BIN
+          chmod +x $MERMAID_BIN
 
       - name: Test
         run: 'make test-mermaid'

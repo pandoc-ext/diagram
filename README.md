@@ -53,7 +53,7 @@ that can be used to specify a specific executable.
 |-------------|-------------------|------------|------------------------|
 | [Asymptote] | `asymptote`       | `asy`      | `ASYMPTOTE`, `ASY_BIN` |
 | [GraphViz]  | `graphviz`, `dot` | `dot`      | `DOT_BIN`              |
-| [Mermaid]   | `mermaid`         | `mmdc`     | `MMDC_BIN`             |
+| [Mermaid]   | `mermaid`         | `mmdc`     | `MERMAID_BIN`          |
 | [PlantUML]  | `plantuml`        | `plantuml` | `PLANTUML_BIN`         |
 | [Ti*k*Z]    | `tikz`            | `pdflatex` | `PDFLATEX_BIN`         |
 
