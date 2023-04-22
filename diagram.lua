@@ -129,6 +129,11 @@ local plantuml = {
 --- GraphViz engine for the dot language
 local graphviz = {
   line_comment_start = '//',
+  mime_types = {
+    ['application/pdf'] = true,
+    ['image/png'] = true,
+    ['image/svg+xml'] = true,
+  },
   compile = function (code, mime_type)
     mime_type = mime_type or 'image/svg+xml'
     local formats = {
