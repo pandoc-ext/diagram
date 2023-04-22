@@ -217,7 +217,6 @@ local asymptote = {
 local default_engines = {
   asymptote = asymptote,
   dot       = graphviz,
-  graphviz  = graphviz,
   mermaid   = mermaid,
   plantuml  = plantuml,
   tikz      = tikz,
