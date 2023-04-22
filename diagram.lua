@@ -426,7 +426,7 @@ local function code_to_figure (conf)
       -- No cached image; call the converter
       local success
       -- Global options take precedence.
-      local user_opts = copy_table_into(engine_opts, props.opt)
+      local user_opts = copy_table_into(engine_opts.opt or {}, props.opt)
       success, img, imgtype =
         pcall(engine.compile, block.text, preferred_mime_type, user_opts)
 
