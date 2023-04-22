@@ -59,12 +59,8 @@ that can be used to specify a specific executable.
 
 ### Other diagram engines
 
-If the filter finds a code block with an unknown type for the
-first time, then it will try to load a diagram engine for that
-type by doing the equivalent of `require 'diagram-TYPE'`, where
-`TYPE` is the first class of a code block. If this succeeds, then
-the loaded engine will be used for this type; otherwise the block
-will be returned unchanged.
+The filter can be extended with local packages; see
+[Configuration](#configuration) below.
 
 [Asymptote]: https://asymptote.sourceforge.io/
 [GraphViz]: https://www.graphviz.org/
@@ -131,12 +127,22 @@ Currently supported options:
     diagram:
       engine:
         plantuml:
-          mime-types:
+          mime-type:
             application/pdf: false
     ```
 
-  + `opt`: options that should be applied to all diagrams that use
-    this engine.
+  + `line_comment_start`: the character sequence that starts a
+    line comment; unset or change this to disable or modify the
+    syntax of user options in the diagram code.
+
+  + `execpath`: the path to the engine's executable. Use this to
+    override the default executable name listed in the table
+    above.
+
+  + `package`: if this option is set then the filter will try to
+    `require` a Lua package with the given name. If the operation
+    is successful, then the result will be used as the compiler
+    for that diagram type.
 
 Security
 --------
