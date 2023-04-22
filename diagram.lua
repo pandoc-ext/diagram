@@ -39,29 +39,6 @@ end
 --- Path holding the image cache, or `nil` if the cache is not used.
 local image_cache = nil
 
---- Table containing program paths. If the program has no explicit path
---- set, then the value of the environment variable with the uppercase
---- name of the program is used when defined. The fallback is to use
---- just the program name, which will cause the program to be looked up
---- in the PATH.
-local path = setmetatable(
-  {},
-  {
-    __index = function (tbl, key)
-      local execpath = key == 'asy' and
-        (os.getenv 'ASYMPTOTE' or os.getenv 'ASY_BIN') or
-        os.getenv(key:upper() .. '_BIN')
-
-      if not execpath or execpath == '' then
-        execpath = key
-      end
-
-      tbl[key] = execpath
-      return execpath
-    end
-  }
-)
-
 local mimetype_for_extension = {
   pdf = 'application/pdf',
   png = 'image/png',
@@ -110,7 +87,7 @@ local plantuml = {
     ['image/png'] = true,
     ['image/svg+xml'] = true,
   },
-  compile = function (puml, mime_type)
+  compile = function (self, puml, mime_type)
     mime_type = mime_type or 'image/svg+xml'
     local formats = {
       ['application/pdf'] = 'pdf',
@@ -122,7 +99,7 @@ local plantuml = {
       format, mime_type = 'svg', 'image/svg+xml'
     end
     local args = {'-t' .. format, "-pipe", "-charset", "UTF8"}
-    return pandoc.pipe(path['plantuml'], args, puml), mime_type
+    return pandoc.pipe(self.execpath or 'plantuml', args, puml), mime_type
   end,
 }
 
@@ -134,7 +111,7 @@ local graphviz = {
     ['image/png'] = true,
     ['image/svg+xml'] = true,
   },
-  compile = function (code, mime_type)
+  compile = function (self, code, mime_type)
     mime_type = mime_type or 'image/svg+xml'
     local formats = {
       ['image/svg+xml'] = 'svg',
@@ -146,7 +123,7 @@ local graphviz = {
     if not format then
       format, mime_type = 'svg', 'image/svg+xml'
     end
-    return pandoc.pipe(path['dot'], {"-T"..format}, code), mime_type
+    return pandoc.pipe(self.execpath or 'dot', {"-T"..format}, code), mime_type
   end,
 }
 
@@ -158,7 +135,7 @@ local mermaid = {
     ['image/svg+xml'] = true,
     ['image/png'] = true,
   },
-  compile = function (code, mime_type)
+  compile = function (self, code, mime_type)
     mime_type = mime_type or 'image/svg+xml'
     local file_extension = extension_for_mimetype[mime_type]
     return with_temporary_directory("diagram", function (tmpdir)
@@ -167,7 +144,7 @@ local mermaid = {
         local outfile = 'diagram.' .. file_extension
         write_file(infile, code)
         pandoc.pipe(
-          path['mmdc'],
+          self.execpath or 'mmdc',
           {"--pdfFit", "--input", infile, "--output", outfile},
           ''
         )
@@ -203,7 +180,7 @@ local tikz = {
   },
 
   --- Compile LaTeX with TikZ code to an image
-  compile = function (src, mime_type, user_opts)
+  compile = function (self, src, mime_type, user_opts)
     return with_temporary_directory("tikz", function (tmpdir)
       return with_working_directory(tmpdir, function ()
         local pkgs = stringify(user_opts['additional-packages'] or '')
@@ -216,7 +193,7 @@ local tikz = {
 
         -- Execute the LaTeX compiler:
         pandoc.pipe(
-          path['pdflatex'],
+          self.execpath or 'pdflatex',
           {'-output-directory', tmpdir, tikz_file},
           ''
         )
@@ -234,12 +211,12 @@ local asymptote = {
   mime_types = {
     ['application/pdf'] = true,
   },
-  compile = function (code, mime_type)
+  compile = function (self, code, mime_type)
     return with_temporary_directory("asymptote", function(tmpdir)
       return with_working_directory(tmpdir, function ()
         local pdf_file = "pandoc_diagram.pdf"
         local args = {'-tex', 'pdflatex', "-o", "pandoc_diagram", '-'}
-        pandoc.pipe(path['asy'], args, code)
+        pandoc.pipe(self.execpath or 'asy', args, code)
         return read_file(pdf_file), (mime_type or 'application/pdf')
       end)
     end)
@@ -271,6 +248,10 @@ local function get_engine (name, engopts)
     return nil
   end
 
+  local execpath = name == 'asy' and
+    (os.getenv 'ASYMPTOTE' or os.getenv 'ASY_BIN') or
+    os.getenv(name:upper() .. '_BIN')
+
   local mime_types = engine.mime_types or {}
   if pandoc.utils.type(engopts['mime-types']) == 'List' then
     -- If the setting is a list, then use only types defined in that List.
@@ -292,7 +273,7 @@ local function get_engine (name, engopts)
   end
 
   return {
-    executable = path[name],
+    execpath = execpath,
     compile = engine.compile,
     line_comment_start = engine.line_comment_start,
     mime_types = mime_types,
@@ -306,9 +287,6 @@ end
 -- environment variable:
 local function configure (meta)
   local conf = meta.diagram or {}
-  for name, execpath in pairs(conf.path or {}) do
-    path[name] = stringify(execpath)
-  end
 
   -- cache for image files
   if conf.cache then
@@ -346,7 +324,7 @@ local pdf2svg = function (imgdata)
     '--export-filename=-',
     pdf_file
   }
-  return pandoc.pipe(path['inkscape'], args, ''), os.remove(pdf_file)
+  return pandoc.pipe('inkscape', args, ''), os.remove(pdf_file)
 end
 
 local function properties_from_code (code, comment_start)
@@ -466,7 +444,7 @@ local function code_to_figure (conf)
       -- Global options take precedence.
       local user_opts = copy_table_into(engine.opt, props.opt)
       success, img, imgtype =
-        pcall(engine.compile, block.text, preferred_mime_type, user_opts)
+        pcall(engine.compile, engine, block.text, preferred_mime_type, user_opts)
 
       -- Bail if an error occurred; img contains the error message when that
       -- happens.
