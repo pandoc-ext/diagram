@@ -66,15 +66,6 @@ local function write_file (filepath, content)
   fh:close()
 end
 
---- Copy all values of the first tables into the second, overwriting
---- values.
-local function copy_table_into (adding, amended)
-  for key, value in pairs(adding) do
-    amended[key] = value
-  end
-  return amended
-end
-
 --
 -- Diagram Engines
 --
@@ -441,10 +432,8 @@ local function code_to_figure (conf)
     if not img or not imgtype then
       -- No cached image; call the converter
       local success
-      -- Global options take precedence.
-      local user_opts = copy_table_into(engine.opt, props.opt)
       success, img, imgtype =
-        pcall(engine.compile, engine, block.text, preferred_mime_type, user_opts)
+        pcall(engine.compile, engine, block.text, preferred_mime_type, props.opt)
 
       -- Bail if an error occurred; img contains the error message when that
       -- happens.
