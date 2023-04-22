@@ -3,7 +3,7 @@
 Example usage from [the Graphviz
 gallery](https://graphviz.gitlab.io/_pages/Gallery/directed/fsm.html):
 
-```{.graphviz caption="Finite State Machine" filename="fsm"}
+```{.dot caption="Finite State Machine" filename="fsm"}
 digraph finite_state_machine {
 	rankdir=LR;
 	node [shape = doublecircle]; LR_0 LR_3 LR_4 LR_8;
