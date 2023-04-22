@@ -49,13 +49,13 @@ that the filter calls to generate an image from the code. The
 *environment variables* column lists the names of env variables
 that can be used to specify a specific executable.
 
-| System      | code block class  | executable | environment variables  |
-|-------------|-------------------|------------|------------------------|
-| [Asymptote] | `asymptote`       | `asy`      | `ASYMPTOTE`, `ASY_BIN` |
-| [GraphViz]  | `graphviz`, `dot` | `dot`      | `DOT_BIN`              |
-| [Mermaid]   | `mermaid`         | `mmdc`     | `MERMAID_BIN`          |
-| [PlantUML]  | `plantuml`        | `plantuml` | `PLANTUML_BIN`         |
-| [Ti*k*Z]    | `tikz`            | `pdflatex` | `PDFLATEX_BIN`         |
+| System      | code block class  | executable | env variable    |
+|-------------|-------------------|------------|-----------------|
+| [Asymptote] | `asymptote`       | `asy`      | `ASYMPTOTE_BIN` |
+| [GraphViz]  | `graphviz`, `dot` | `dot`      | `DOT_BIN`       |
+| [Mermaid]   | `mermaid`         | `mmdc`     | `MERMAID_BIN`   |
+| [PlantUML]  | `plantuml`        | `plantuml` | `PLANTUML_BIN`  |
+| [Ti*k*Z]    | `tikz`            | `pdflatex` | `PDFLATEX_BIN`  |
 
 ### Other diagram engines
 

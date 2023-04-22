@@ -239,9 +239,7 @@ local function get_engine (name, engopts)
     return nil
   end
 
-  local execpath = name == 'asy' and
-    (os.getenv 'ASYMPTOTE' or os.getenv 'ASY_BIN') or
-    os.getenv(name:upper() .. '_BIN')
+  local execpath = engopts.execpath or os.getenv(name:upper() .. '_BIN')
 
   local mime_types = engine.mime_types or {}
   if pandoc.utils.type(engopts['mime-types']) == 'List' then
