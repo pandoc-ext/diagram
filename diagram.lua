@@ -49,8 +49,8 @@ local path = setmetatable(
   {
     __index = function (tbl, key)
       local execpath = key == 'asy' and
-        (os.getenv 'ASYMPTOTE' or os.getenv 'ASY') or
-        os.getenv(key:upper())
+        (os.getenv 'ASYMPTOTE' or os.getenv 'ASY_BIN') or
+        os.getenv(key:upper() .. '_BIN')
 
       if not execpath or execpath == '' then
         execpath = key
