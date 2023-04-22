@@ -116,6 +116,26 @@ Currently supported options:
   Caching is disabled if none of the environment variables
   mentioned above has been defined.
 
+- `engine`: options for specific engines. The options must be
+  given as a map that is nested below the engine name. e.g.
+  `plantuml` or `mermaid`. Supported engine options:
+
+  + `mime-types`: the output MIME types that can be produced with
+    this engine. This can be used to disable certain output
+    formats. For example, the below disables support for PDF
+    output in PlantUML, which can be useful when the necessary
+    libraries are unavailable on a system:
+
+    ``` yaml
+    diagram:
+      engine:
+        plantuml:
+          mime-types:
+            application/pdf: false
+    ```
+
+  + `opt`: options that should be applied to all diagrams that use
+    this engine.
 
 Security
 --------
