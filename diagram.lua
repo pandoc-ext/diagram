@@ -98,30 +98,6 @@ local function copy_table_into (adding, amended)
   return amended
 end
 
--- Execute the meta data table to determine the paths. This function
--- must be called first to get the desired path. If one of these
--- meta options was set, it gets used instead of the corresponding
--- environment variable:
-local function configure (meta)
-  local conf = meta.diagram or {}
-  for name, execpath in pairs(conf.path or {}) do
-    path[name] = stringify(execpath)
-  end
-
-  -- cache for image files
-  if conf.cache then
-    image_cache = conf['cache-dir']
-      and stringify(conf['cache-dir'])
-      or cachedir()
-    pandoc.system.make_directory(image_cache, true)
-  end
-
-  -- engine configs
-  conf.engine = conf.engine or {}
-
-  return conf
-end
-
 --
 -- Diagram Engines
 --
@@ -129,7 +105,7 @@ end
 -- PlantUML engine; assumes that there's a `plantuml` binary.
 local plantuml = {
   line_comment_start =  [[']],
-  supported_mime_types = {
+  mime_types = {
     ['application/pdf'] = true,
     ['image/png'] = true,
     ['image/svg+xml'] = true,
@@ -172,7 +148,7 @@ local graphviz = {
 --- Mermaid engine
 local mermaid = {
   line_comment_start = '%%',
-  supported_mime_types = {
+  mime_types = {
     ['application/pdf'] = true,
     ['image/svg+xml'] = true,
     ['image/png'] = true,
@@ -217,7 +193,7 @@ local tikz_template = [[
 local tikz = {
   line_comment_start = '%%',
 
-  supported_mime_types = {
+  mime_types = {
     ['application/pdf'] = true,
   },
 
@@ -250,6 +226,9 @@ local tikz = {
 --- Asymptote diagram engine
 local asymptote = {
   line_comment_start = '%%',
+  mime_types = {
+    ['application/pdf'] = true,
+  },
   compile = function (code, mime_type)
     return with_temporary_directory("asymptote", function(tmpdir)
       return with_working_directory(tmpdir, function ()
@@ -262,31 +241,91 @@ local asymptote = {
   end,
 }
 
---- Table containing mapping from the names of supported diagram engines
---- to the converter functions.
-local diagram_engines = setmetatable(
-  {
-    asymptote = asymptote,
-    dot       = graphviz,
-    graphviz  = graphviz,
-    mermaid   = mermaid,
-    plantuml  = plantuml,
-    tikz      = tikz,
-  },
-  {
-    __index = function (tbl, diagtype)
-      local success, result = pcall(require, 'diagram-' .. diagtype)
-      if success and result then
-        tbl[diagtype] = result
-        return result
-      else
-        -- do not try this again
-        tbl[diagtype] = false
-        return nil
-      end
+local default_engines = {
+  asymptote = asymptote,
+  dot       = graphviz,
+  graphviz  = graphviz,
+  mermaid   = mermaid,
+  plantuml  = plantuml,
+  tikz      = tikz,
+}
+
+--
+-- Configuration
+--
+local function get_engine (name, engopts)
+  local engine = default_engines[name] or
+    select(2, pcall(require, stringify(engopts.package)))
+
+  -- Sanity check
+  if not engine then
+    warn(PANDOC_SCRIPT_FILE, ": No such engine '", name, "'.")
+    return nil
+  elseif engopts == false then
+    -- engine is disabled
+    return nil
+  end
+
+  local mime_types = engine.mime_types or {}
+  if pandoc.utils.type(engopts['mime-types']) == 'List' then
+    -- If the setting is a list, then use only types defined in that List.
+    engine.mime_types = {}
+    for _, value in ipairs(engopts['mime-types']) do
+      mime_types[stringify(value)] = true
     end
+  elseif pandoc.utils.type(engopts['mime-types']) == 'table' then
+    -- A table should enable/disable specific types
+    for mime_type, setting in pairs(engopts['mime-types']) do
+      mime_types[mime_type] = setting
+    end
+  elseif type(engopts['mime-types']) ~= 'nil' then
+    -- Assume string, Inlines, and Blocks values specify the only
+    -- acceptable MIME type.
+    mime_types = {
+      [stringify(engopts['mime-types'])] = true,
+    }
+  end
+
+  return {
+    executable = path[name],
+    compile = engine.compile,
+    line_comment_start = engine.line_comment_start,
+    mime_types = mime_types,
+    opt = engopts.opt or {},
   }
-)
+end
+
+-- Execute the meta data table to determine the paths. This function
+-- must be called first to get the desired path. If one of these
+-- meta options was set, it gets used instead of the corresponding
+-- environment variable:
+local function configure (meta)
+  local conf = meta.diagram or {}
+  for name, execpath in pairs(conf.path or {}) do
+    path[name] = stringify(execpath)
+  end
+
+  -- cache for image files
+  if conf.cache then
+    image_cache = conf['cache-dir']
+      and stringify(conf['cache-dir'])
+      or cachedir()
+    pandoc.system.make_directory(image_cache, true)
+  end
+
+  -- engine configs
+  local engine = {}
+  for name, engopts in pairs(conf.engine or default_engines) do
+    engine[name] = get_engine(name, engopts)
+  end
+
+  return {
+    engine = engine,
+    cache = image_cache and true,
+    image_cache = image_cache,
+  }
+end
+
 
 --
 -- Format conversion
@@ -335,14 +374,14 @@ local function diagram_properties (cb, comment_start)
     id = cb.identifier ~= '' and cb.identifier or attribs.label,
     name = attribs.name,
   }
-  local engine_opt = {}
+  local user_opt = {}
 
   for k, v in pairs(attribs) do
     local prefix, key = k:match '^(%a+)%-(%a[-%w]*)$'
     if prefix == 'fig' then
       fig_attr[key] = v
     elseif prefix == 'opt' then
-      engine_opt[key] = v
+      user_opt[key] = v
     end
   end
 
@@ -356,7 +395,7 @@ local function diagram_properties (cb, comment_start)
       width = attribs.width,
       style = attribs.style,
     },
-    ['opt'] = engine_opt,
+    ['opt'] = user_opt,
   }
 end
 
@@ -401,8 +440,7 @@ local function code_to_figure (conf)
       return nil
     end
 
-    local engine = diagram_engines[diagram_type]
-    local engine_opts = conf.engine[diagram_type] or {}
+    local engine = conf.engine[diagram_type]
     if not engine then
       return nil
     end
@@ -410,13 +448,8 @@ local function code_to_figure (conf)
     -- Unified properties.
     local props = diagram_properties(block, engine.line_comment_start, conf)
 
-    local supported_mime_types = engine.supported_mime_types or {}
-    for mime_type, setting in pairs(engine_opts['mime-types'] or {}) do
-      supported_mime_types[mime_type] = setting
-    end
-
     local preferred_mime_type = preferred_mime_types:find_if(function (pref)
-        return supported_mime_types[pref]
+        return engine.mime_types[pref]
     end)
 
     -- Try to retrieve the image data from the cache.
@@ -426,7 +459,7 @@ local function code_to_figure (conf)
       -- No cached image; call the converter
       local success
       -- Global options take precedence.
-      local user_opts = copy_table_into(engine_opts.opt or {}, props.opt)
+      local user_opts = copy_table_into(engine.opt, props.opt)
       success, img, imgtype =
         pcall(engine.compile, block.text, preferred_mime_type, user_opts)
 
