@@ -278,6 +278,7 @@ end
 -- environment variable:
 local function configure (meta)
   local conf = meta.diagram or {}
+  meta.diagram = nil
 
   -- cache for image files
   if conf.cache then
