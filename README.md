@@ -120,11 +120,12 @@ Currently supported options:
   given as a map that is nested below the engine name. e.g.
   `plantuml` or `mermaid`. Supported engine options:
 
-  + `mime-types`: the output MIME types that can be produced with
-    this engine. This can be used to disable certain output
-    formats. For example, the below disables support for PDF
-    output in PlantUML, which can be useful when the necessary
-    libraries are unavailable on a system:
+  + `mime-type`: the output MIME type that should be produced with
+    this engine. This can be used to choose a specific type, or to
+    disable certain output formats. For example, the below
+    disables support for PDF output in PlantUML, which can be
+    useful when the necessary libraries are unavailable on a
+    system:
 
     ``` yaml
     diagram:

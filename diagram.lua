@@ -78,8 +78,8 @@ local plantuml = {
     ['image/png'] = true,
     ['image/svg+xml'] = true,
   },
-  compile = function (self, puml, mime_type)
-    mime_type = mime_type or 'image/svg+xml'
+  compile = function (self, puml)
+    local mime_type = self.mime_type or 'image/svg+xml'
     local formats = {
       ['application/pdf'] = 'pdf',
       ['image/png'] = 'png',
@@ -102,8 +102,8 @@ local graphviz = {
     ['image/png'] = true,
     ['image/svg+xml'] = true,
   },
-  compile = function (self, code, mime_type)
-    mime_type = mime_type or 'image/svg+xml'
+  compile = function (self, code)
+    local mime_type = self.mime_type or 'image/svg+xml'
     local formats = {
       ['image/svg+xml'] = 'svg',
       ['application/pdf'] = 'pdf',
@@ -126,8 +126,8 @@ local mermaid = {
     ['image/svg+xml'] = true,
     ['image/png'] = true,
   },
-  compile = function (self, code, mime_type)
-    mime_type = mime_type or 'image/svg+xml'
+  compile = function (self, code)
+    local mime_type = self.mime_type or 'image/svg+xml'
     local file_extension = extension_for_mimetype[mime_type]
     return with_temporary_directory("diagram", function (tmpdir)
       return with_working_directory(tmpdir, function ()
@@ -171,7 +171,7 @@ local tikz = {
   },
 
   --- Compile LaTeX with TikZ code to an image
-  compile = function (self, src, mime_type, user_opts)
+  compile = function (self, src, user_opts)
     return with_temporary_directory("tikz", function (tmpdir)
       return with_working_directory(tmpdir, function ()
         local pkgs = stringify(user_opts['additional-packages'] or '')
@@ -189,7 +189,6 @@ local tikz = {
           ''
         )
 
-        -- ignore the passed MIME type; always return PDF output
         return read_file(pdf_file), 'application/pdf'
       end)
     end)
@@ -202,13 +201,13 @@ local asymptote = {
   mime_types = {
     ['application/pdf'] = true,
   },
-  compile = function (self, code, mime_type)
+  compile = function (self, code)
     return with_temporary_directory("asymptote", function(tmpdir)
       return with_working_directory(tmpdir, function ()
         local pdf_file = "pandoc_diagram.pdf"
         local args = {'-tex', 'pdflatex', "-o", "pandoc_diagram", '-'}
         pandoc.pipe(self.execpath or 'asy', args, code)
-        return read_file(pdf_file), (mime_type or 'application/pdf')
+        return read_file(pdf_file), 'application/pdf'
       end)
     end)
   end,
@@ -225,7 +224,38 @@ local default_engines = {
 --
 -- Configuration
 --
-local function get_engine (name, engopts)
+
+--- Options for the output format of the given name.
+local function format_options (name)
+  local pdf2svg = name ~= 'latex' and name ~= 'context'
+  local preferred_mime_types = pandoc.List{'application/pdf', 'image/png'}
+  -- Prefer SVG for non-PDF output formats
+  if pdf2svg then
+    preferred_mime_types:insert(1, 'image/svg+xml')
+  end
+  return {
+    name = name,
+    pdf2svg = pdf2svg,
+    preferred_mime_types = preferred_mime_types,
+    best_mime_type = function (self, supported_mime_types, requested)
+      return self.preferred_mime_types:find_if(function (preferred)
+          return supported_mime_types[preferred] and
+            (not requested or
+             (pandoc.utils.type(requested) == 'List' and
+              requested:includes(preferred)) or
+             (pandoc.utils.type(requested) == 'table' and
+              requested[preferred]) or
+
+             -- Assume string, Inlines, and Blocks values specify the only
+             -- acceptable MIME type.
+             stringify(requested) == preferred)
+      end)
+    end
+  }
+end
+
+--- Returns a configured diagram engine.
+local function get_engine (name, engopts, format)
   local engine = default_engines[name] or
     select(2, pcall(require, stringify(engopts.package)))
 
@@ -240,41 +270,28 @@ local function get_engine (name, engopts)
 
   local execpath = engopts.execpath or os.getenv(name:upper() .. '_BIN')
 
-  local mime_types = engine.mime_types or {}
-  if pandoc.utils.type(engopts['mime-types']) == 'List' then
-    -- If the setting is a list, then use only types defined in that List.
-    engine.mime_types = {}
-    for _, value in ipairs(engopts['mime-types']) do
-      mime_types[stringify(value)] = true
-    end
-  elseif pandoc.utils.type(engopts['mime-types']) == 'table' then
-    -- A table should enable/disable specific types
-    for mime_type, setting in pairs(engopts['mime-types']) do
-      mime_types[mime_type] = setting
-    end
-  elseif type(engopts['mime-types']) ~= 'nil' then
-    -- Assume string, Inlines, and Blocks values specify the only
-    -- acceptable MIME type.
-    mime_types = {
-      [stringify(engopts['mime-types'])] = true,
-    }
+  local mime_type = format:best_mime_type(
+    engine.mime_types,
+    engopts['mime-type'] or engopts['mime-types']
+  )
+  if not mime_type then
+    warn(PANDOC_SCRIPT_FILE, ": Cannot use ", name, " with ", format.name)
+    return nil
   end
 
   return {
     execpath = execpath,
     compile = engine.compile,
     line_comment_start = engine.line_comment_start,
-    mime_types = mime_types,
+    mime_type = mime_type,
     opt = engopts.opt or {},
   }
 end
 
--- Execute the meta data table to determine the paths. This function
--- must be called first to get the desired path. If one of these
--- meta options was set, it gets used instead of the corresponding
--- environment variable:
-local function configure (meta)
+--- Returns the diagram engine configs.
+local function configure (meta, format_name)
   local conf = meta.diagram or {}
+  local format = format_options(format_name)
   meta.diagram = nil
 
   -- cache for image files
@@ -288,11 +305,12 @@ local function configure (meta)
   -- engine configs
   local engine = {}
   for name, engopts in pairs(conf.engine or default_engines) do
-    engine[name] = get_engine(name, engopts)
+    engine[name] = get_engine(name, engopts, format)
   end
 
   return {
     engine = engine,
+    format = format,
     cache = image_cache and true,
     image_cache = image_cache,
   }
@@ -397,11 +415,6 @@ local function cache_image (codeblock, imgdata, mimetype)
   write_file(imgpath, imgdata)
 end
 
-local preferred_mime_types = pandoc.List{'image/svg+xml', 'image/png'}
-if (FORMAT == 'latex' or FORMAT == 'context') then
-  preferred_mime_types = pandoc.List{'application/pdf', 'image/png'}
-end
-
 -- Executes each document's code block to find matching code blocks:
 local function code_to_figure (conf)
   return function (block)
@@ -420,10 +433,6 @@ local function code_to_figure (conf)
     -- Unified properties.
     local props = diagram_properties(block, engine.line_comment_start, conf)
 
-    local preferred_mime_type = preferred_mime_types:find_if(function (pref)
-        return engine.mime_types[pref]
-    end)
-
     -- Try to retrieve the image data from the cache.
     local img, imgtype = get_cached_image(pandoc.sha1(block.text))
 
@@ -431,7 +440,7 @@ local function code_to_figure (conf)
       -- No cached image; call the converter
       local success
       success, img, imgtype =
-        pcall(engine.compile, engine, block.text, preferred_mime_type, props.opt)
+        pcall(engine.compile, engine, block.text, props.opt)
 
       -- Bail if an error occurred; img contains the error message when that
       -- happens.
@@ -452,7 +461,7 @@ local function code_to_figure (conf)
     end
 
     -- Convert SVG if necessary.
-    if imgtype == 'application/pdf' and not preferred_mime_types[imgtype] then
+    if imgtype == 'application/pdf' and conf.format.pdf2svg then
       img, imgtype = pdf2svg(img), 'image/svg+xml'
     end
 
@@ -473,7 +482,7 @@ local function code_to_figure (conf)
 end
 
 function Pandoc (doc)
-  local conf = configure(doc.meta)
+  local conf = configure(doc.meta, FORMAT)
   return doc:walk {
     CodeBlock = code_to_figure(conf),
   }
