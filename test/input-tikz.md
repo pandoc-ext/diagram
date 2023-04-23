@@ -28,10 +28,14 @@ examples](http://www.texample.net/tikz/examples/parallelepiped/) by
 }
 ```
 
+Diagram showing how the delta-graph relates to the other graphs.
+Note that this diagram does not have a caption, so it will be
+rendered as a plain image instead of a figure.
+
 ``` {.tikz}
 %%| label: delta-graph
 %%| filename: delta-graph.pdf
-%%| fig-cap: Diagram showing how the delta-graph relates to the other graphs.
+%%| alt: Diagram showing how the delta-graph relates to the other graphs.
 \usetikzlibrary{arrows,shapes}
 
 \tikzset{cat object/.style=   {node distance=4em}}

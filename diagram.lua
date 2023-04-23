@@ -348,7 +348,7 @@ local function properties_from_code (code, comment_start)
   return props
 end
 
-local function diagram_properties (cb, comment_start)
+local function diagram_options (cb, comment_start)
   local attribs = comment_start
     and properties_from_code(cb.text, comment_start)
     or {}
@@ -359,7 +359,7 @@ local function diagram_properties (cb, comment_start)
   -- Read caption attribute as Markdown
   local caption = attribs.caption
     and pandoc.read(attribs.caption).blocks
-    or pandoc.Blocks{}
+    or nil
   local fig_attr = {
     id = cb.identifier ~= '' and cb.identifier or attribs.label,
     name = attribs.name,
@@ -376,7 +376,8 @@ local function diagram_properties (cb, comment_start)
   end
 
   return {
-    ['alt'] = pandoc.utils.blocks_to_inlines(caption),
+    ['alt'] = attribs.alt or
+      caption and pandoc.utils.blocks_to_inlines(caption),
     ['caption'] = caption,
     ['fig-attr'] = fig_attr,
     ['filename'] = attribs.filename,
@@ -431,53 +432,62 @@ local function code_to_figure (conf)
     end
 
     -- Unified properties.
-    local props = diagram_properties(block, engine.line_comment_start, conf)
+    local dgr_opt = diagram_options(block, engine.line_comment_start)
 
     -- Try to retrieve the image data from the cache.
-    local img, imgtype = get_cached_image(pandoc.sha1(block.text))
+    local imgdata, imgtype = get_cached_image(pandoc.sha1(block.text))
 
-    if not img or not imgtype then
+    if not imgdata or not imgtype then
       -- No cached image; call the converter
       local success
-      success, img, imgtype =
-        pcall(engine.compile, engine, block.text, props.opt)
+      success, imgdata, imgtype =
+        pcall(engine.compile, engine, block.text, dgr_opt.opt)
 
-      -- Bail if an error occurred; img contains the error message when that
-      -- happens.
+      -- Bail if an error occurred; imgdata contains the error message
+      -- when that happens.
       if not success then
-        warn(PANDOC_SCRIPT_FILE, ': ', tostring(img))
+        warn(PANDOC_SCRIPT_FILE, ': ', tostring(imgdata))
         return nil
-      elseif not img then
-        warn(PANDOC_SCRIPT_FILE, 'Diagram engine returned no image data.')
+      elseif not imgdata then
+        warn(PANDOC_SCRIPT_FILE, ': Diagram engine returned no image data.')
         return nil
       elseif not imgtype then
-        warn(PANDOC_SCRIPT_FILE, 'Diagram engine did not return a MIME type.')
+        warn(PANDOC_SCRIPT_FILE, ': Diagram engine did not return a MIME type.')
         return nil
       end
 
       -- If we got here, then the transformation went ok and `img` contains
       -- the image data.
-      cache_image(block, img, imgtype)
+      cache_image(block, imgdata, imgtype)
     end
 
     -- Convert SVG if necessary.
     if imgtype == 'application/pdf' and conf.format.pdf2svg then
-      img, imgtype = pdf2svg(img), 'image/svg+xml'
+      imgdata, imgtype = pdf2svg(imgdata), 'image/svg+xml'
     end
 
     -- Use the block's filename attribute or create a new name by hashing the
     -- image content.
     local basename, _extension = pandoc.path.split_extension(
-      props.filename or pandoc.sha1(img)
+      dgr_opt.filename or pandoc.sha1(imgdata)
     )
     local fname = basename .. '.' .. extension_for_mimetype[imgtype]
 
     -- Store the data in the media bag:
-    pandoc.mediabag.insert(fname, imgtype, img)
+    pandoc.mediabag.insert(fname, imgtype, imgdata)
 
-    -- Create a figure that contains just this image.
-    local img_obj = pandoc.Image(props.alt, fname, "", props['image-attr'])
-    return pandoc.Figure(pandoc.Plain{img_obj}, props.caption, props['fig-attr'])
+    -- Create the image object.
+    local image = pandoc.Image(dgr_opt.alt, fname, "", dgr_opt['image-attr'])
+
+    -- Create a figure if the diagram has a caption; otherwise return
+    -- just the image.
+    return dgr_opt.caption and
+      pandoc.Figure(
+        pandoc.Plain{image},
+        dgr_opt.caption,
+        dgr_opt['fig-attr']
+      ) or
+      pandoc.Plain{image}
   end
 end
 
