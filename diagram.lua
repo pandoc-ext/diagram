@@ -390,17 +390,15 @@ local function diagram_options (cb, comment_start)
   }
 end
 
-local function get_cached_image (hash)
+local function get_cached_image (hash, mime_type)
   if not image_cache then
     return nil
   end
-  for _, ext in ipairs{'pdf', 'svg', 'png'} do
-    local filename = hash .. '.' .. ext
-    local imgpath = pandoc.path.join{image_cache, filename}
-    local success, imgdata = pcall(read_file, imgpath)
-    if success then
-      return imgdata, mimetype_for_extension[ext]
-    end
+  local filename = hash .. '.' .. extension_for_mimetype[mime_type]
+  local imgpath = pandoc.path.join{image_cache, filename}
+  local success, imgdata = pcall(read_file, imgpath)
+  if success then
+    return imgdata, mime_type
   end
   return nil
 end
@@ -434,8 +432,17 @@ local function code_to_figure (conf)
     -- Unified properties.
     local dgr_opt = diagram_options(block, engine.line_comment_start)
 
+    local run_pdf2svg = engine.mime_type == 'application/pdf'
+      and conf.format.pdf2svg
+
     -- Try to retrieve the image data from the cache.
-    local imgdata, imgtype = get_cached_image(pandoc.sha1(block.text))
+    local imgdata, imgtype
+    if conf.cache then
+      imgdata, imgtype = get_cached_image(
+        pandoc.sha1(block.text),
+        run_pdf2svg and 'image/svg+xml' or engine.mime_type
+      )
+    end
 
     if not imgdata or not imgtype then
       -- No cached image; call the converter
@@ -456,14 +463,14 @@ local function code_to_figure (conf)
         return nil
       end
 
+      -- Convert SVG if necessary.
+      if imgtype == 'application/pdf' and conf.format.pdf2svg then
+        imgdata, imgtype = pdf2svg(imgdata), 'image/svg+xml'
+      end
+
       -- If we got here, then the transformation went ok and `img` contains
       -- the image data.
       cache_image(block, imgdata, imgtype)
-    end
-
-    -- Convert SVG if necessary.
-    if imgtype == 'application/pdf' and conf.format.pdf2svg then
-      imgdata, imgtype = pdf2svg(imgdata), 'image/svg+xml'
     end
 
     -- Use the block's filename attribute or create a new name by hashing the
