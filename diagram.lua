@@ -40,6 +40,8 @@ end
 local image_cache = nil
 
 local mimetype_for_extension = {
+  jpeg = 'image/jpeg',
+  jpg = 'image/jpeg',
   pdf = 'application/pdf',
   png = 'image/png',
   svg = 'image/svg+xml',
@@ -47,9 +49,21 @@ local mimetype_for_extension = {
 
 local extension_for_mimetype = {
   ['application/pdf'] = 'pdf',
+  ['image/jpeg'] = 'jpg',
+  ['image/png'] = 'png',
   ['image/svg+xml'] = 'svg',
-  ['image/png'] = 'png'
 }
+
+--- Converts a list of format specifiers to a set of MIME types.
+local function mime_types_set (tbl)
+  local set = {}
+  local mime_type
+  for _, image_format_spec in ipairs(tbl) do
+    mime_type = mimetype_for_extension[image_format_spec] or image_format_spec
+    set[mime_type] = true
+  end
+  return set
+end
 
 --- Reads the contents of a file.
 local function read_file (filepath)
@@ -73,19 +87,11 @@ end
 -- PlantUML engine; assumes that there's a `plantuml` binary.
 local plantuml = {
   line_comment_start =  [[']],
-  mime_types = {
-    ['application/pdf'] = true,
-    ['image/png'] = true,
-    ['image/svg+xml'] = true,
-  },
+  mime_types = mime_types_set{'pdf', 'png', 'svg'},
   compile = function (self, puml)
     local mime_type = self.mime_type or 'image/svg+xml'
-    local formats = {
-      ['application/pdf'] = 'pdf',
-      ['image/png'] = 'png',
-      ['image/svg+xml'] = 'svg',
-    }
-    local format = formats[mime_type]
+    -- PlantUML format identifiers correspond to common file extensions.
+    local format = extension_for_mimetype[mime_type]
     if not format then
       format, mime_type = 'svg', 'image/svg+xml'
     end
@@ -97,20 +103,12 @@ local plantuml = {
 --- GraphViz engine for the dot language
 local graphviz = {
   line_comment_start = '//',
-  mime_types = {
-    ['application/pdf'] = true,
-    ['image/png'] = true,
-    ['image/svg+xml'] = true,
-  },
+  mime_types = mime_types_set{'jpg', 'pdf', 'png', 'svg'},
+  mime_type = 'image/svg+xml',
   compile = function (self, code)
-    local mime_type = self.mime_type or 'image/svg+xml'
-    local formats = {
-      ['image/svg+xml'] = 'svg',
-      ['application/pdf'] = 'pdf',
-      ['image/jpeg'] = 'jpg',
-      ['image/png'] = 'png',
-    }
-    local format = formats[mime_type]
+    local mime_type = self.mime_type
+    -- GraphViz format identifiers correspond to common file extensions.
+    local format = extension_for_mimetype[mime_type]
     if not format then
       format, mime_type = 'svg', 'image/svg+xml'
     end
@@ -121,11 +119,7 @@ local graphviz = {
 --- Mermaid engine
 local mermaid = {
   line_comment_start = '%%',
-  mime_types = {
-    ['application/pdf'] = true,
-    ['image/svg+xml'] = true,
-    ['image/png'] = true,
-  },
+  mime_types = mime_types_set{'pdf', 'png', 'svg'},
   compile = function (self, code)
     local mime_type = self.mime_type or 'image/svg+xml'
     local file_extension = extension_for_mimetype[mime_type]
