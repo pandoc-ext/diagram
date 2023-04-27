@@ -67,7 +67,7 @@ jobs:
             make graphviz
 
       - name: Test
-        run: 'make test-dot'
+        run: 'make test-dot test-no-alt-or-caption'
 
   Mermaid:
     runs-on: ubuntu-latest

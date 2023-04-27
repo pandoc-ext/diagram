@@ -371,7 +371,8 @@ local function diagram_options (cb, comment_start)
 
   return {
     ['alt'] = attribs.alt or
-      caption and pandoc.utils.blocks_to_inlines(caption),
+      (caption and pandoc.utils.blocks_to_inlines(caption)) or
+      {},
     ['caption'] = caption,
     ['fig-attr'] = fig_attr,
     ['filename'] = attribs.filename,
