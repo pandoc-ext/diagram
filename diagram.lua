@@ -278,7 +278,7 @@ local function get_engine (name, engopts, format)
     compile = engine.compile,
     line_comment_start = engine.line_comment_start,
     mime_type = mime_type,
-    opt = engopts.opt or {},
+    opt = engopts or {},
   }
 end
 
@@ -426,6 +426,9 @@ local function code_to_figure (conf)
 
     -- Unified properties.
     local dgr_opt = diagram_options(block, engine.line_comment_start)
+    for optname, value in pairs(engine.opt or {}) do
+      dgr_opt.opt[optname] = dgr_opt.opt[optname] or value
+    end
 
     local run_pdf2svg = engine.mime_type == 'application/pdf'
       and conf.format.pdf2svg
