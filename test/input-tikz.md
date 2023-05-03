@@ -3,7 +3,8 @@ diagram:
   cache: false
   engine:
     tikz:
-      additional-packages: '`\usepackage{adjustbox}`'
+      header-includes:
+        - '\usetikzlibrary{arrows, shapes}'
 ---
 
 ### Ti*k*Z
@@ -14,8 +15,8 @@ examples](http://www.texample.net/tikz/examples/parallelepiped/) by
 
 ```{.tikz
     caption="Tetrahedron inscribed in a parallelepiped."
-    filename="parallelepiped"}
-\usetikzlibrary{arrows}
+    filename="parallelepiped"
+    opt-additional-packages="\usepackage{adjustbox}"}
 \tikzstyle{int}=[draw, fill=blue!20, minimum size=2em]
 \tikzstyle{init} = [pin edge={to-,thin,black}]
 
@@ -43,8 +44,6 @@ rendered as a plain image instead of a figure.
 %%| label: delta-graph
 %%| filename: delta-graph.pdf
 %%| alt: Diagram showing how the delta-graph relates to the other graphs.
-\usetikzlibrary{arrows,shapes}
-
 \tikzset{cat object/.style=   {node distance=4em}}
 
 \begin{tikzpicture}[]

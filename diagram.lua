@@ -145,14 +145,15 @@ local mermaid = {
 --- LaTeX template used to compile TikZ images. Takes additional
 --- packages as the first, and the actual TikZ code as the second
 --- argument.
-local tikz_template = [[
+local tikz_template = pandoc.template.compile [[
 \documentclass{standalone}
 \usepackage{tikz}
-%% begin: additional packages
-%s
-%% end: additional packages
+$for(header-includes)$
+$it$
+$endfor$
+$additional-packages$
 \begin{document}
-%s
+$body$
 \end{document}
 ]]
 
@@ -168,12 +169,24 @@ local tikz = {
   compile = function (self, src, user_opts)
     return with_temporary_directory("tikz", function (tmpdir)
       return with_working_directory(tmpdir, function ()
-        local pkgs = stringify(user_opts['additional-packages'] or '')
         -- Define file names:
         local file_template = "%s/tikz-image.%s"
         local tikz_file = file_template:format(tmpdir, "tex")
         local pdf_file = file_template:format(tmpdir, "pdf")
-        local tex_code = tikz_template:format(pkgs, src)
+
+        -- Treat string values as raw LaTeX
+        local meta = {
+          ['header-includes'] = user_opts['header-includes'],
+          ['additional-packages'] = {pandoc.RawInline(
+            'latex',
+            stringify(user_opts['additional-packages'] or '')
+          )},
+        }
+        local tex_code = pandoc.write(
+          pandoc.Pandoc({pandoc.RawBlock('latex', src)}, meta),
+          'latex',
+          {template = tikz_template}
+        )
         write_file(tikz_file, tex_code)
 
         -- Execute the LaTeX compiler:
