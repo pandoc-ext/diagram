@@ -275,7 +275,9 @@ local function get_engine (name, engopts, format)
     return nil
   end
 
-  local execpath = engopts.execpath or os.getenv(name:upper() .. '_BIN')
+  local execpath = engopts.execpath
+    and stringify(engopts.execpath)
+    or os.getenv(name:upper() .. '_BIN')
 
   local mime_type = format:best_mime_type(
     engine.mime_types,

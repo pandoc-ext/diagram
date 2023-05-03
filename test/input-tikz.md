@@ -3,6 +3,7 @@ diagram:
   cache: false
   engine:
     tikz:
+      execpath: lualatex
       header-includes:
         - '\usetikzlibrary{arrows, shapes}'
 ---

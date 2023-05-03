@@ -164,6 +164,10 @@ options differ only in how string values are handled, with bare
 strings in `header-includes` being escaped and those in
 `additional-packages` being treated as TeX code.
 
+While mentioned above, it should be highlighted that the
+`execpath` option can be used to select a specific LaTeX engine.
+The default is `pdflatex`.
+
 Example:
 
 ``` yaml
@@ -171,6 +175,7 @@ Example:
 diagram:
   engine:
     tikz:
+      execpath: lualatex
       include-headers:
         - '\usepackage{adjustbox}'
         - '\usetikzlibrary{arrows, shapes}'
