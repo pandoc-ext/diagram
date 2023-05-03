@@ -6,5 +6,7 @@ metadata:
   pagetitle: dot diagram
   diagram:
     cache: false
+    engine:
+      dot: true
 variables:
   document-css: false

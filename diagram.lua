@@ -273,6 +273,9 @@ local function get_engine (name, engopts, format)
   elseif engopts == false then
     -- engine is disabled
     return nil
+  elseif engopts == true then
+    -- use default options
+    return engine
   end
 
   local execpath = engopts.execpath

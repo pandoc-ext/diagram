@@ -112,9 +112,11 @@ Currently supported options:
   Caching is disabled if none of the environment variables
   mentioned above has been defined.
 
-- `engine`: options for specific engines. The options must be
-  given as a map that is nested below the engine name. e.g.
-  `plantuml` or `mermaid`. Supported engine options:
+- `engine`: options for specific engines, e.g. `plantuml` or
+  `mermaid`. The options must be nested below the engine name.
+  Allowed settings are either `true` or `false` to enable or
+  disable the engine, respectively, or a a map of options.
+  The available settings are:
 
   + `mime-type`: the output MIME type that should be produced with
     this engine. This can be used to choose a specific type, or to
