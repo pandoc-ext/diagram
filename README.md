@@ -144,6 +144,39 @@ Currently supported options:
     is successful, then the result will be used as the compiler
     for that diagram type.
 
+  + Any other option is passed through to the engine. See the
+    engine-specific settings below.
+
+### Engine-specific options
+
+Some engines accept additional options. These options can either
+be passed globally as part of the respective `engine` entry, or
+locally by adding `opt-NAME` as an attribute to the diagram code
+block. Global options always override local options for security
+reasons.
+
+#### Ti*k*Z
+
+The Ti*k*Z engine accepts the `header-includes` and
+`additional-packages` options. Both options are added to the
+intermediary TeX file that is used to produce the output file. The
+options differ only in how string values are handled, with bare
+strings in `header-includes` being escaped and those in
+`additional-packages` being treated as TeX code.
+
+Example:
+
+``` yaml
+---
+diagram:
+  engine:
+    tikz:
+      include-headers:
+        - '\usepackage{adjustbox}'
+        - '\usetikzlibrary{arrows, shapes}'
+---
+```
+
 Security
 --------
 
@@ -155,4 +188,4 @@ filter to avoid malicious and misuse of the filter.
 
 The security is improved considerably if the `diagram` metadata
 field is unset or set to a predefined value before this filter is
-called, e.g., via another filter.
+called, e.g., via another filter or a defaults file.
