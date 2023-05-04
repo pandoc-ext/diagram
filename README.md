@@ -181,12 +181,42 @@ diagram:
 Security
 --------
 
-This filter **must not** be used with **untrusted documents**. The
-filter effectively turns the document into a script that can run
-arbitrary commands with the user's permissions. It is hence
-recommended to review any document before using it with this
-filter to avoid malicious and misuse of the filter.
+This filter **should not** be used with **untrusted documents**,
+***unless*** local configs prevent the setting of filter options
+in the metadata: An attacker that can set the execpath for an
+engine can execute any binary on the system with the user's
+permissions. It is hence recommended to review any document before
+using it with this filter to avoid malicious and misuse of the
+filter.
 
 The security is improved considerably if the `diagram` metadata
 field is unset or set to a predefined value before this filter is
 called, e.g., via another filter or a defaults file.
+
+Here is an example defaults file that configures the filter such
+that the configs cannot be overwritten by the document.
+
+``` yaml
+# file: diagram-filter.yaml
+filters: ['diagram.lua']
+metadata:
+  engine:
+    # enable dot/GraphViz and PlantUML with default options
+    dot: true
+    plantuml: true
+
+    # disable processing of asymptote and Mermaid diagrams
+    asymptote: false
+    mermaid: false
+
+    # Use LuaLaTeX to compile TikZ, define headers
+    tikz:
+      execpath: lualatex
+      additional-packages: |
+        \usepackage{adjustbox}
+        \usetikzlibrary{arrows, shapes}
+```
+
+Usage:
+
+    pandoc -d diagram-filter ...
