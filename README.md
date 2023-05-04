@@ -92,12 +92,6 @@ The filter can be configured with the `diagram` metadata entry.
 
 Currently supported options:
 
-- `path`: map from executable names to file paths. Just like with
-  environment variables, this will override the binary that is
-  called to convert an image. The entries in the metadata have the
-  highest priority, so if both a metadata field and an env var is
-  set, then the value from the metadata will be used.
-
 - `cache`: controls whether the images are cached. If the cache is
   enabled, then the images are recreated only when their code
   changes. This option is *disabled* by default.
