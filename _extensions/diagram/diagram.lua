@@ -1,9 +1,9 @@
 --[[
-diagram-generator – create images and figures from code blocks.
+diagram – create images and figures from code blocks.
 
 See copyright notice in file LICENSE.
 ]]
--- Module pandoc.system is required and was added in version 2.7.3
+-- The filter uses the Figure AST element, which was added in pandoc 3.
 PANDOC_VERSION:must_be_at_least '3.0'
 
 -- Report Lua warnings to stderr
