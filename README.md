@@ -13,6 +13,9 @@ Usage
 The filter modifies the internal document representation; it can
 be used with many publishing systems that are based on pandoc.
 
+Please make sure to read the section on [security](#security) if
+you are going to use this filter with third-party input documents.
+
 ### Plain pandoc
 
 Pass the filter to pandoc via the `--lua-filter` (or `-L`) command
