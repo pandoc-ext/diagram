@@ -118,7 +118,7 @@ Currently supported options:
   Windows and `$HOME/.cache` on all other platforms.
 
   Caching is disabled if none of the environment variables
-  mentioned above has been defined.
+  mentioned above have been defined.
 
 - `engine`: options for specific engines, e.g. `plantuml` or
   `mermaid`. The options must be nested below the engine name.
@@ -128,7 +128,7 @@ Currently supported options:
 
   + `mime-type`: the output MIME type that should be produced with
     this engine. This can be used to choose a specific type, or to
-    disable certain output formats. For example, the below
+    disable certain output formats. For example, the following
     disables support for PDF output in PlantUML, which can be
     useful when the necessary libraries are unavailable on a
     system:
