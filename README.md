@@ -22,9 +22,23 @@ line option.
 
 ### Quarto
 
-While it is possible to use this filter with Quarto, it is not
-encouraged. Quarto comes its own system for diagram generation,
-and that should be used instead.
+Users of Quarto can install this filter as an extension with
+
+    quarto install extension pandoc-ext/diagram
+
+and use it by adding `diagram` to the `filters` entry in their
+YAML header.
+
+``` yaml
+---
+filters:
+  - diagram
+---
+``**
+
+**Note**: Quarto comes with its own system for diagram generation;
+we recommend to use Quarto's built-in diagram options when
+possible, especially for Mermaid diagrams.
 
 ### R Markdown
 
