@@ -83,7 +83,7 @@ The filter can be extended with local packages; see
 [GraphViz]: https://www.graphviz.org/
 [Mermaid]: https://mermaid.js.org/
 [PlantUML]: https://plantuml.com/
-[Ti*k*Z]: https://en.wikipedia.org/wiki/PGF/TikZ
+[Ti*k*Z]: https://github.com/pgf-tikz/pgf
 
 Figure options
 --------------
