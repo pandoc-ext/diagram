@@ -82,7 +82,7 @@ The filter can be extended with local packages; see
 [Asymptote]: https://asymptote.sourceforge.io/
 [GraphViz]: https://www.graphviz.org/
 [Mermaid]: https://mermaid.js.org/
-[PlantUML]: https://plantuml.org/
+[PlantUML]: https://plantuml.com/
 [Ti*k*Z]: https://en.wikipedia.org/wiki/PGF/TikZ
 
 Figure options
