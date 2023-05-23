@@ -37,7 +37,7 @@ YAML header.
 filters:
   - diagram
 ---
-``**
+```
 
 **Note**: Quarto comes with its own system for diagram generation;
 we recommend to use Quarto's built-in diagram options when
