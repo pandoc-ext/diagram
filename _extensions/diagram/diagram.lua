@@ -241,6 +241,8 @@ local function format_options (name)
   -- Prefer SVG for non-PDF output formats
   if pdf2svg then
     preferred_mime_types:insert(1, 'image/svg+xml')
+  else
+    preferred_mime_types:insert('image/svg+xml')
   end
   return {
     name = name,
