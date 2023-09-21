@@ -141,6 +141,45 @@ local mermaid = {
   end,
 }
 
+-- blockdiag engine
+-- supports blockdiag actdiag nwdiag packetdiag rackdiag seqdiag
+-- sudo pip install blockdiag actdiag nwdiag seqdiag
+-- see http://blockdiag.com/
+local blockdiag = {
+  line_comment_start = '//',
+  mime_types = mime_types_set{'pdf', 'png', 'svg'},
+  execpath = 'blockdiag',
+  compile = function (self, code)
+    local mime_type = self.mime_type or 'image/svg+xml'
+    local format = extension_for_mimetype[mime_type]
+    return with_temporary_directory("diagram", function (tmpdir)
+      return with_working_directory(tmpdir, function ()
+        local infile = 'diagram.diag'
+        local outfile = 'diagram.' .. format
+        write_file(infile, code)
+        pandoc.pipe(self.execpath, {"-T", format, infile, "-o", outfile}, '')
+        return read_file(outfile), mime_type
+      end)
+    end)
+  end,
+}
+
+local function newdiag(diag)
+  d = {}
+  for k, v in pairs(blockdiag) do
+    d[k] = v
+  end
+  d.execpath = diag
+  diag = d
+  return diag
+end
+
+local actdiag = newdiag('actdiag')
+local nwdiag = newdiag('nwdiag')
+local packetdiag = newdiag('packetdiag')
+local rackdiag = newdiag('rackdiag')
+local seqdiag = newdiag('seqdiag')
+
 --- TikZ
 --
 
@@ -223,11 +262,17 @@ local asymptote = {
 }
 
 local default_engines = {
-  asymptote = asymptote,
-  dot       = graphviz,
-  mermaid   = mermaid,
-  plantuml  = plantuml,
-  tikz      = tikz,
+  asymptote  = asymptote,
+  dot        = graphviz,
+  mermaid    = mermaid,
+  plantuml   = plantuml,
+  tikz       = tikz,
+  blockdiag  = blockdiag,
+  actdiag    = actdiag,
+  nwdiag     = nwdiag,
+  packetdiag = packetdiag,
+  rackdiag   = rackdiag,
+  seqdiag    = seqdiag,
 }
 
 --
