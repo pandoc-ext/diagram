@@ -130,8 +130,12 @@ local mermaid = {
         local infile = 'diagram.mmd'
         local outfile = 'diagram.' .. file_extension
         write_file(infile, code)
+        local mmdc_executable = 'mmdc'
+        if os.getenv('OS') ~= nil and os.getenv('OS'):match('Windows') then
+          mmdc_executable = 'mmdc.cmd'
+        end
         pandoc.pipe(
-          self.execpath or 'mmdc',
+          self.execpath or mmdc_executable,
           {"--pdfFit", "--input", infile, "--output", outfile},
           ''
         )
