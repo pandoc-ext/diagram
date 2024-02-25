@@ -148,8 +148,7 @@ local mermaid = {
 --- packages as the first, and the actual TikZ code as the second
 --- argument.
 local tikz_template = pandoc.template.compile [[
-\documentclass{standalone}
-\usepackage{tikz}
+\documentclass[tikz]{standalone}
 $for(header-includes)$
 $it$
 $endfor$
