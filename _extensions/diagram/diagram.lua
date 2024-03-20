@@ -10,7 +10,7 @@ PANDOC_VERSION:must_be_at_least '3.0'
 if warn then
   warn '@on'
 else
-  warn = function (...) io.stderr:write(string.concat({...})) end
+  warn = function(...) io.stderr:write(table.concat({ ... })) end
 end
 
 local system = require 'pandoc.system'
@@ -192,13 +192,19 @@ local tikz = {
         write_file(tikz_file, tex_code)
 
         -- Execute the LaTeX compiler:
-        pandoc.pipe(
+        local output, status, signal = pandoc.pipe(
           self.execpath or 'pdflatex',
-          {'-output-directory', tmpdir, tikz_file},
+          { '-interaction=nonstopmode', '-output-directory', tmpdir, tikz_file },
           ''
         )
+        pdf_content = read_file(pdf_file)
+        if status ~= 0 or signal ~= 0 or pdf_content == nil then
+          warn(string.format(
+          "pdflatex failed with status %s and signal %s. Output:\n%s",
+            tostring(status), tostring(signal), tostring(output)))
+        end
 
-        return read_file(pdf_file), 'application/pdf'
+        return pdf_content, 'application/pdf'
       end)
     end)
   end
