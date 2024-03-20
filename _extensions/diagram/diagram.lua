@@ -10,7 +10,7 @@ PANDOC_VERSION:must_be_at_least '3.0'
 if warn then
   warn '@on'
 else
-  warn = function (...) io.stderr:write(string.concat({...})) end
+  warn = function(...) io.stderr:write(table.concat({ ... })) end
 end
 
 local system = require 'pandoc.system'
