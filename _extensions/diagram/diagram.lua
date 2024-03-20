@@ -200,7 +200,6 @@ local tikz = {
         pdf_content = read_file(pdf_file)
         if status ~= 0 or signal ~= 0 or pdf_content == nil then
           print(output)
-          print(pdf_content)
           print(status)
           print(signal)
 
