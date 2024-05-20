@@ -190,19 +190,21 @@ local tikz = {
         write_file(tikz_file, tex_code)
 
         -- Execute the LaTeX compiler:
-        local output, status, signal = pandoc.pipe(
+        local success, result = pcall(
+          pandoc.pipe,
           self.execpath or 'pdflatex',
           { '-interaction=nonstopmode', '-output-directory', tmpdir, tikz_file },
           ''
         )
-        pdf_content = read_file(pdf_file)
-        if status ~= 0 or signal ~= 0 or pdf_content == nil then
+        if not success then
           warn(string.format(
-          "pdflatex failed with status %s and signal %s. Output:\n%s",
-            tostring(status), tostring(signal), tostring(output)))
+                 "The call\n%s\nfailed with error code %s. Output:\n%s",
+                 result.command,
+                 result.error_code,
+                 result.output
+          ))
         end
-
-        return pdf_content, 'application/pdf'
+        return read_file(pdf_file), 'application/pdf'
       end)
     end)
   end
