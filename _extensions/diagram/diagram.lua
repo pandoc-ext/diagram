@@ -6,10 +6,16 @@ See copyright notice in file LICENSE.
 -- The filter uses the Figure AST element, which was added in pandoc 3.
 PANDOC_VERSION:must_be_at_least '3.0'
 
--- Always report Lua warnings to stderr. It would be preferable to use the
--- default `warn` function that's plugged into pandoc's logging system, but it
--- appears to be buggy.
-warn = function(...) io.stderr:write(table.concat({ ... })) end
+-- Report Lua warnings to stderr if the `warn` function is not plugged into
+-- pandoc's logging system.
+if not warn then
+  -- fallback
+  warn = function(...) io.stderr:write(table.concat({ ... })) end
+elseif PANDOC_VERSION < '3.1.4' then
+  -- starting with pandoc 3.1.4, warnings are reported to pandoc's logging
+  -- system, so no need to print warnings to stderr.
+  warn '@on'
+end
 
 local system = require 'pandoc.system'
 local utils = require 'pandoc.utils'
