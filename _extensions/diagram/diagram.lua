@@ -148,9 +148,7 @@ local mermaid = {
 --- TikZ
 --
 
---- LaTeX template used to compile TikZ images. Takes additional
---- packages as the first, and the actual TikZ code as the second
---- argument.
+--- LaTeX template used to compile TikZ images.
 local tikz_template = pandoc.template.compile [[
 \documentclass{standalone}
 \usepackage{tikz}
