@@ -189,7 +189,7 @@ diagram:
   engine:
     tikz:
       execpath: lualatex
-      include-headers:
+      header-includes:
         - '\usepackage{adjustbox}'
         - '\usetikzlibrary{arrows, shapes}'
 ---
