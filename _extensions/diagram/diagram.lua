@@ -17,6 +17,8 @@ elseif PANDOC_VERSION < '3.1.4' then
   warn '@on'
 end
 
+local io = require 'io'
+local pandoc = require 'pandoc'
 local system = require 'pandoc.system'
 local utils = require 'pandoc.utils'
 local stringify = utils.stringify
@@ -248,8 +250,8 @@ local default_engines = {
 local function format_options (name)
   local pdf2svg = name ~= 'latex' and name ~= 'context'
   local preferred_mime_types = pandoc.List{'application/pdf', 'image/png'}
-  -- Prefer SVG for non-PDF output formats
-  if pdf2svg then
+  -- Prefer SVG for non-PDF output formats, except for Office formats
+  if pdf2svg and name ~= 'docx' and name ~= 'odt' then
     preferred_mime_types:insert(1, 'image/svg+xml')
   end
   return {
