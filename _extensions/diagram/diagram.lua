@@ -255,7 +255,9 @@ local function format_options (name)
     and pandoc.List{'image/png', 'application/pdf'}
     or  pandoc.List{'application/pdf', 'image/png'}
   -- Prefer SVG for non-PDF output formats, except for Office formats
-  if pdf2svg and not is_office_format then
+  if is_office_format then
+    preferred_mime_types:insert('image/svg+xml')
+  elseif pdf2svg then
     preferred_mime_types:insert(1, 'image/svg+xml')
   end
   return {
