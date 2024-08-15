@@ -388,37 +388,51 @@ local function diagram_options (cb, comment_start)
     attribs[key] = value
   end
 
-  -- Read caption attribute as Markdown
-  local caption = attribs.caption
-    and pandoc.read(attribs.caption).blocks
-    or nil
-  local fig_attr = {
-    id = cb.identifier ~= '' and cb.identifier or attribs.label,
-    name = attribs.name,
-  }
+  local alt
+  local caption
+  local fig_attr = {id = cb.identifier ~= '' and cb.identifier}
+  local filename
+  local image_attr = {}
   local user_opt = {}
 
-  for k, v in pairs(attribs) do
-    local prefix, key = k:match '^(%a+)%-(%a[-%w]*)$'
-    if prefix == 'fig' then
-      fig_attr[key] = v
-    elseif prefix == 'opt' then
-      user_opt[key] = v
+  for attr_name, value in pairs(attribs) do
+    if attr_name == 'alt' then
+      alt = value
+    elseif attr_name == 'caption' then
+      -- Read caption attribute as Markdown
+      caption = attribs.caption
+        and pandoc.read(attribs.caption).blocks
+        or nil
+    elseif attr_name == 'filename' then
+      filename = value
+    elseif attr_name == 'label' then
+      fig_attr.id = value
+    elseif attr_name == 'name' then
+      fig_attr.name = value
+    else
+      -- Check for prefixed attributes
+      local prefix, key = attr_name:match '^(%a+)%-(%a[-%w]*)$'
+      if prefix == 'fig' then
+        fig_attr[key] = value
+      elseif prefix == 'image' or prefix == 'img' then
+        image_attr[key] = value
+      elseif prefix == 'opt' then
+        user_opt[key] = value
+      else
+        -- Use as image attribute
+        image_attr[attr_name] = value
+      end
     end
   end
 
   return {
-    ['alt'] = attribs.alt or
+    ['alt'] = alt or
       (caption and pandoc.utils.blocks_to_inlines(caption)) or
       {},
     ['caption'] = caption,
     ['fig-attr'] = fig_attr,
-    ['filename'] = attribs.filename,
-    ['image-attr'] = {
-      height = attribs.height,
-      width = attribs.width,
-      style = attribs.style,
-    },
+    ['filename'] = filename,
+    ['image-attr'] = image_attr,
     ['opt'] = user_opt,
   }
 end
