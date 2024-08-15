@@ -16,6 +16,13 @@ be used with many publishing systems that are based on pandoc.
 Please make sure to read the section on [security](#security) if
 you are going to use this filter with third-party input documents.
 
+> [!IMPORTANT]
+> This filter makes the generated images available to pandoc, but
+> *does not* write image files by itself. Use pandoc's
+> `--extract-media` to write the generated images to disk. Or,
+> when producing HTML, use `--embed-resources` to incorporate the
+> images in the output file via `data` URIs.
+
 ### Plain pandoc
 
 Pass the filter to pandoc via the `--lua-filter` (or `-L`) command
