@@ -390,7 +390,7 @@ local function diagram_options (cb, comment_start)
 
   local alt
   local caption
-  local fig_attr = {id = cb.identifier ~= '' and cb.identifier}
+  local fig_attr = {id = cb.identifier}
   local filename
   local image_attr = {}
   local user_opt = {}
