@@ -6,6 +6,8 @@ See copyright notice in file LICENSE.
 -- The filter uses the Figure AST element, which was added in pandoc 3.
 PANDOC_VERSION:must_be_at_least '3.0'
 
+local version = pandoc.types.Version '1.1.0'
+
 -- Report Lua warnings to stderr if the `warn` function is not plugged into
 -- pandoc's logging system.
 if not warn then
@@ -548,9 +550,15 @@ local function code_to_figure (conf)
   end
 end
 
-function Pandoc (doc)
-  local conf = configure(doc.meta, FORMAT)
-  return doc:walk {
-    CodeBlock = code_to_figure(conf),
+return {
+  version = version,
+
+  {
+    Pandoc = function (doc)
+      local conf = configure(doc.meta, FORMAT)
+      return doc:walk {
+        CodeBlock = code_to_figure(conf),
+      }
+    end
   }
-end
+}
