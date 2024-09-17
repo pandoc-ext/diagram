@@ -70,7 +70,6 @@ jobs:
         run: 'make test-dot test-no-alt-or-caption'
 
   Mermaid:
-    if: false
     runs-on: ubuntu-latest
     strategy:
       fail-fast: true
@@ -94,7 +93,7 @@ jobs:
         run: |
           apk update && apk add chromium chromium-chromedriver make npm
           npm install -g @mermaid-js/mermaid-cli
-          printf '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' > \
+          printf '{"args":["--no-sandbox","--disable-setuid-sandbox", "--disable-gpu"]}' > \
               /etc/puppeteer-conf.json
           printf '#!/bin/sh\nmmdc -p /etc/puppeteer-conf.json $@' > $MERMAID_BIN
           chmod +x $MERMAID_BIN
