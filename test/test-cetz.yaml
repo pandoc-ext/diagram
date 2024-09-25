@@ -1,0 +1,9 @@
+input-files: ['test/input-cetz.md']
+filters:
+  - diagram.lua
+to: html
+metadata:
+  diagram:
+    engine:
+      cetz:
+        execpath: ['quarto', 'typst']

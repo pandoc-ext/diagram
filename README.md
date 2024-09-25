@@ -102,6 +102,7 @@ that can be used to specify a specific executable.
 | [Mermaid]   | `mermaid`         | `mmdc`     | `MERMAID_BIN`   |
 | [PlantUML]  | `plantuml`        | `plantuml` | `PLANTUML_BIN`  |
 | [Ti*k*Z]    | `tikz`            | `pdflatex` | `PDFLATEX_BIN`  |
+| [cetz]      | `cetz`            | `typst`    | `TYPST_BIN`     |
 
 ### Other diagram engines
 
@@ -113,6 +114,7 @@ The filter can be extended with local packages; see
 [Mermaid]: https://mermaid.js.org/
 [PlantUML]: https://plantuml.com/
 [Ti*k*Z]: https://github.com/pgf-tikz/pgf
+[Cetz]: https://github.com/cetz-package/cetz
 
 Figure options
 --------------

@@ -153,6 +153,20 @@ jobs:
       - name: Test
         run: 'make test-tikz'
 
+  Cetz:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    container:
+      image: ghcr.io/quarto-dev/quarto:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Render
+        run: make PANDOC=/opt/quarto/bin/tools/x86_64/pandoc test-cetz
+  
   Quarto:
     runs-on: ubuntu-latest
     strategy:
