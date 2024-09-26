@@ -550,15 +550,16 @@ local function code_to_figure (conf)
   end
 end
 
-return {
-  version = version,
-
-  {
+return setmetatable(
+  {{
     Pandoc = function (doc)
       local conf = configure(doc.meta, FORMAT)
       return doc:walk {
         CodeBlock = code_to_figure(conf),
       }
     end
+  }},
+  {
+    version = version,
   }
-}
+)
