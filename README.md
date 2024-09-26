@@ -46,9 +46,31 @@ filters:
 ---
 ```
 
-**Note**: Quarto comes with its own system for diagram generation;
-we recommend to use Quarto's built-in diagram options when
-possible, especially for Mermaid diagrams.
+#### Notes on usage with Quarto
+
+Quarto comes with its own system for diagram generation that can
+be used for a variety of diagrams. Especially Mermaid diagram
+generation is much faster with Quarto's built-in diagram handling.
+
+Due to the way in which Quarto handles code blocks, *do not* add
+`filename` attributes to code block attribute lists.
+
+`````` markdown
+``` {.tikz filename="my-graph"}
+% DON'T use the filename attribute on code blocks
+...
+``````
+
+Instead, use the "comment-pipe" syntax to define the graphic's
+file name.
+
+`````` markdown
+``` tikz
+%%| filename: my-graph
+% This should work ok.
+...
+```
+``````
 
 ### R Markdown
 
