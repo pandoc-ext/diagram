@@ -152,3 +152,28 @@ jobs:
 
       - name: Test
         run: 'make test-tikz'
+
+  Quarto:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    container:
+      image: ghcr.io/quarto-dev/quarto:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          apt-get -q --no-allow-insecure-repositories update && \
+          apt-get install --no-install-recommends --assume-yes \
+            make plantuml
+
+      # Quarto rendering should complete without failure, and the
+      # resulting HTML page should contain an image.
+      - name: Render
+        run: quarto render test/plantuml-quarto.qmd
+
+      - name: Check for image
+        run: grep -q '<img ' test/plantuml-quarto.html
