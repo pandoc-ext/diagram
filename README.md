@@ -181,6 +181,11 @@ Currently supported options:
     override the default executable name listed in the table
     above.
 
+    Use a list to pass additional arguments to the executable.
+    E.g., `execpath: ['xelatex' '-halt-on-error']` will use
+    `xelatex` as the executable and pass `-halt-on-error` as the
+    first argument.
+
   + `package`: if this option is set then the filter will try to
     `require` a Lua package with the given name. If the operation
     is successful, then the result will be used as the compiler
