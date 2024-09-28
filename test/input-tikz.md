@@ -3,7 +3,7 @@ diagram:
   cache: false
   engine:
     tikz:
-      execpath: pdflatex
+      execpath: ['xelatex', '-halt-on-error']
       header-includes:
         - '\usetikzlibrary{arrows, shapes}'
 ---
