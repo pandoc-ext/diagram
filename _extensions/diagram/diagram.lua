@@ -90,6 +90,22 @@ local function write_file (filepath, content)
   fh:close()
 end
 
+--- Like `pandoc.pipe`, but allows "multi word" paths:
+-- Supplying a list as the first argument will use the first element as
+-- the executable path and prepend the remaining elements to the list of
+-- arguments.
+local function pipe (command, args, input)
+  local cmd
+  if pandoc.utils.type(command) == 'List' then
+    cmd = command:remove(1)
+    args = command:extend(args)
+  else
+    cmd = pandoc.utils.stringify(command)
+  end
+  return pandoc.pipe(cmd, args, input)
+end
+
+
 --
 -- Diagram Engines
 --
@@ -106,7 +122,7 @@ local plantuml = {
       format, mime_type = 'svg', 'image/svg+xml'
     end
     local args = {'-t' .. format, "-pipe", "-charset", "UTF8"}
-    return pandoc.pipe(self.execpath or 'plantuml', args, puml), mime_type
+    return pipe(self.execpath or 'plantuml', args, puml), mime_type
   end,
 }
 
@@ -122,7 +138,7 @@ local graphviz = {
     if not format then
       format, mime_type = 'svg', 'image/svg+xml'
     end
-    return pandoc.pipe(self.execpath or 'dot', {"-T"..format}, code), mime_type
+    return pipe(self.execpath or 'dot', {"-T"..format}, code), mime_type
   end,
 }
 
@@ -138,7 +154,7 @@ local mermaid = {
         local infile = 'diagram.mmd'
         local outfile = 'diagram.' .. file_extension
         write_file(infile, code)
-        pandoc.pipe(
+        pipe(
           self.execpath or 'mmdc',
           {"--pdfFit", "--input", infile, "--output", outfile},
           ''
@@ -199,7 +215,7 @@ local tikz = {
 
         -- Execute the LaTeX compiler:
         local success, result = pcall(
-          pandoc.pipe,
+          pipe,
           self.execpath or 'pdflatex',
           { '-interaction=nonstopmode', '-output-directory', tmpdir, tikz_file },
           ''
@@ -229,7 +245,7 @@ local asymptote = {
       return with_working_directory(tmpdir, function ()
         local pdf_file = "pandoc_diagram.pdf"
         local args = {'-tex', 'pdflatex', "-o", "pandoc_diagram", '-'}
-        pandoc.pipe(self.execpath or 'asy', args, code)
+        pipe(self.execpath or 'asy', args, code)
         return read_file(pdf_file), 'application/pdf'
       end)
     end)
@@ -300,9 +316,7 @@ local function get_engine (name, engopts, format)
     return engine
   end
 
-  local execpath = engopts.execpath
-    and stringify(engopts.execpath)
-    or os.getenv(name:upper() .. '_BIN')
+  local execpath = engopts.execpath or os.getenv(name:upper() .. '_BIN')
 
   local mime_type = format:best_mime_type(
     engine.mime_types,
