@@ -99,7 +99,8 @@ local function pipe (command, args, input)
   if pandoc.utils.type(command) == 'List' then
     command = command:map(stringify)
     cmd = command:remove(1)
-    args = command:extend(args)
+    command:extend(args)
+    args = command
   else
     cmd = stringify(command)
   end
@@ -253,12 +254,45 @@ local asymptote = {
   end,
 }
 
+--- Cetz diagram engine
+local cetz = {
+  line_comment_start = '%%',
+  mime_types = mime_types_set{'jpg', 'pdf', 'png', 'svg'},
+  mime_type = 'image/svg+xml',
+  compile = function (self, code)
+    local mime_type = self.mime_type
+    local format = extension_for_mimetype[mime_type]
+    if not format then
+      format, mime_type = 'svg', 'image/svg+xml'
+    end
+    local preamble = [[
+#import "@preview/cetz:0.2.2"
+#set page(width: auto, height: auto, margin: .5cm)
+]]
+    
+    local typst_code = preamble .. code
+
+    return with_temporary_directory("diagram", function (tmpdir)
+      return with_working_directory(tmpdir, function ()
+        local outfile = 'diagram.' .. format
+        pipe(
+          self.execpath or 'typst',
+          {"compile", "-f", format, "-", outfile},
+          typst_code
+        )
+        return read_file(outfile), mime_type
+      end)
+    end)
+  end,
+}
+
 local default_engines = {
   asymptote = asymptote,
   dot       = graphviz,
   mermaid   = mermaid,
   plantuml  = plantuml,
   tikz      = tikz,
+  cetz      = cetz,
 }
 
 --
@@ -364,7 +398,6 @@ local function configure (meta, format_name)
     image_cache = image_cache,
   }
 end
-
 
 --
 -- Format conversion
