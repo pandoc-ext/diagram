@@ -167,7 +167,8 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get -q --no-allow-insecure-repositories update && \
-          apt-get install --no-install-recommends --assume-yes make
+          apt-get install --no-install-recommends --assume-yes \
+            ca-certificates make
 
       - name: Render
         run: make PANDOC=/opt/quarto/bin/tools/x86_64/pandoc test-cetz
