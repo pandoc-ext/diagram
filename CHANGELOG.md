@@ -4,6 +4,23 @@ The diagram filter is versioned using [Semantic Versioning][].
 
 [Semantic Versioning]: https://semver.org/
 
+## v1.2.0
+
+Released 2024-10-01.
+
+- Added support for CeTZ diagrams that are compiled with Typst.
+  ([Benjamin Abel](https://github.com/benabel))
+
+- Allow arrays as execpaths. It's now possible to set an array as
+  `execpath` value in the configs in order to add extra
+  parameters. E.g., PlantUML can be configured with
+
+  ``` yaml
+  execpath: ['java', '-jar', '/path/to/plantuml.jar']
+  ```
+
+- Fix filter when used with Quarto.
+
 ## v1.1.0
 
 Released 2024-09-17.
