@@ -22,7 +22,8 @@ end
 local io = require 'io'
 local pandoc = require 'pandoc'
 local system = require 'pandoc.system'
-local utils = require 'pandoc.utils'
+local utils  = require 'pandoc.utils'
+local List   = require 'pandoc.List'
 local stringify = utils.stringify
 local with_temporary_directory = system.with_temporary_directory
 local with_working_directory = system.with_working_directory
@@ -99,8 +100,7 @@ local function pipe (command, args, input)
   if pandoc.utils.type(command) == 'List' then
     command = command:map(stringify)
     cmd = command:remove(1)
-    command:extend(args)
-    args = command
+    args = command .. args
   else
     cmd = stringify(command)
   end
@@ -269,14 +269,19 @@ local cetz = {
 #import "@preview/cetz:0.2.2"
 #set page(width: auto, height: auto, margin: .5cm)
 ]]
-    
+
     local typst_code = preamble .. code
 
     return with_temporary_directory("diagram", function (tmpdir)
       return with_working_directory(tmpdir, function ()
         local outfile = 'diagram.' .. format
+        local execpath = self.execpath
+        if not execpath and quarto and quarto.version >= '1.4' then
+          -- fall back to the Typst exec shipped with Quarto.
+          execpath = List{'quarto', 'typst'}
+        end
         pipe(
-          self.execpath or 'typst',
+          execpath or 'typst',
           {"compile", "-f", format, "-", outfile},
           typst_code
         )
