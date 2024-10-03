@@ -55,7 +55,7 @@ set the environment variable `DOT` or use the pandoc's meta variable
 Example usage from [the Graphviz
 gallery](https://graphviz.gitlab.io/_pages/Gallery/directed/fsm.html):
 
-```{.graphviz caption="This is an image, created by **Graphviz**'s dot."}
+```{.dot caption="This is an image, created by **Graphviz**'s dot."}
 digraph finite_state_machine {
 	rankdir=LR;
 	node [shape = doublecircle]; LR_0 LR_3 LR_4 LR_8;
