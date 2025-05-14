@@ -266,7 +266,7 @@ local cetz = {
       format, mime_type = 'svg', 'image/svg+xml'
     end
     local preamble = [[
-#import "@preview/cetz:0.2.2"
+#import "@preview/cetz:0.3.4"
 #set page(width: auto, height: auto, margin: .5cm)
 ]]
 
