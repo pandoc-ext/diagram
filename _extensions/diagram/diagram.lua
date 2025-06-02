@@ -155,12 +155,27 @@ local mermaid = {
       return with_working_directory(tmpdir, function ()
         local infile = 'diagram.mmd'
         local outfile = 'diagram.' .. file_extension
+        local args = {"--pdfFit", "--input", infile, "--output", outfile}
+        if self.opt then
+          if self.opt.theme then
+            table.insert(args, '--theme' .. stringify(self.opt.theme))
+            table.insert(args, stringify(self.opt.cssFile))
+          end
+          if self.opt.configFile then
+            table.insert(args, '--configFile')
+            table.insert(args, stringify(self.opt.configFile))
+          end
+          if self.opt.cssFile then
+            table.insert(args, '--cssFile' .. stringify(self.opt.cssFile))
+            table.insert(args, stringify(self.opt.cssFile))
+          end
+          if self.opt.puppeteerConfigFile then
+            table.insert(args, '--puppeteerConfigFile')
+            table.insert(args, stringify(self.opt.puppeteerConfigFile))
+          end
+        end
         write_file(infile, code)
-        pipe(
-          self.execpath or 'mmdc',
-          {"--pdfFit", "--input", infile, "--output", outfile},
-          ''
-        )
+        pipe(self.execpath or 'mmdc', args,'')
         return read_file(outfile), mime_type
       end)
     end)

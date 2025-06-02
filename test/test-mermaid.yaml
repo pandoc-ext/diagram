@@ -5,6 +5,10 @@ to: html
 metadata:
   pagetitle: Mermaid diagram
   diagram:
-    cache: false
+  engine:
+    mermaid:
+      execpath: /usr/local/bin/mmdc
+      puppeteerConfigFile: /etc/puppeteer-conf.json
 variables:
   document-css: false
+embed-resources: true
