@@ -291,6 +291,75 @@ local cetz = {
   end,
 }
 
+-- LaTeX template used to compile bussproofs proof trees.
+local prooftree_template = pandoc.template.compile [[
+% border required to not cut off output
+% varwidth required for bussproofs to work at all
+\documentclass[border=10pt,varwidth]{standalone}
+\usepackage{bussproofs}
+$for(header-includes)$
+$it$
+$endfor$
+$additional-packages$
+\begin{document}
+\EnableBpAbbreviations % useful
+$body$
+\end{document}
+]]
+
+-- The prooftree engine is adopted entirely from the TikZ template.
+local prooftree = {
+  line_comment_start = '%%',
+
+  mime_types = {
+    ['application/pdf'] = true,
+  },
+
+  -- Compile LaTeX with bussproofs trees to an image
+  compile = function (self, src, user_opts)
+    return with_temporary_directory("prooftree", function (tmpdir)
+      return with_working_directory(tmpdir, function ()
+        -- Define file names:
+        local file_template = "%s/prooftree-image.%s"
+        local prooftree_file = file_template:format(tmpdir, "tex")
+        local pdf_file = file_template:format(tmpdir, "pdf")
+
+        -- Treat string values as raw LaTeX
+        local meta = {
+          ['header-includes'] = user_opts['header-includes'],
+          ['additional-packages'] = {pandoc.RawInline(
+            'latex',
+            stringify(user_opts['additional-packages'] or '')
+          )},
+        }
+        local tex_code = pandoc.write(
+          pandoc.Pandoc({pandoc.RawBlock('latex', src)}, meta),
+          'latex',
+          {template = prooftree_template}
+        )
+        write_file(prooftree_file, tex_code)
+
+        -- Execute the LaTeX compiler:
+        local success, result = pcall(
+          pipe,
+          self.execpath or 'pdflatex',
+          { '-interaction=nonstopmode', '-output-directory', tmpdir, prooftree_file },
+          ''
+        )
+        if not success then
+          warn(string.format(
+                 "The call\n%s\nfailed with error code %s. Output:\n%s",
+                 result.command,
+                 result.error_code,
+                 result.output
+          ))
+        end
+        return read_file(pdf_file), 'application/pdf'
+      end)
+    end)
+  end
+}
+
 local default_engines = {
   asymptote = asymptote,
   dot       = graphviz,
@@ -298,6 +367,7 @@ local default_engines = {
   plantuml  = plantuml,
   tikz      = tikz,
   cetz      = cetz,
+  prooftree = prooftree,
 }
 
 --
