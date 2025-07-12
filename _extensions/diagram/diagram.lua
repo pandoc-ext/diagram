@@ -292,19 +292,22 @@ local cetz = {
 }
 
 --- LaTeX template used to compile forest syntax trees.
+--- We provide the \begin{forest} item, too, so that only the [] syntax is needed.
 local forest_template = pandoc.template.compile [[
 \documentclass{standalone}
-\usepackage{forest}
+\usepackage[linguistics]{forest}
 $for(header-includes)$
 $it$
 $endfor$
 $additional-packages$
 \begin{document}
+\begin{forest}
 $body$
+\end{forest}
 \end{document}
 ]]
 
---- The forest engine is adopted entirely from the TikZ template.
+--- The forest engine is adopted from the TikZ template.
 local forest = {
   line_comment_start = '%%',
 
