@@ -291,6 +291,30 @@ local cetz = {
   end,
 }
 
+--- D2 engine for the D2 language
+local d2 = {
+  line_comment_start = '#',
+  mime_types = mime_types_set{'png', 'svg'},
+
+  compile = function (self, code, user_opts)
+    return with_temporary_directory('diagram', function (tmpdir)
+      return with_working_directory(tmpdir, function ()
+        -- D2 format identifiers correspond to common file extensions.
+        local mime_type = self.mime_type or 'image/svg+xml'
+        local file_extension = extension_for_mimetype[mime_type]
+        local infile = 'diagram.d2'
+        local outfile = 'diagram.' .. file_extension
+
+        write_file(infile, code)
+
+        pipe(self.execpath or 'd2', {infile, outfile}, '')
+
+        return read_file(outfile), mime_type
+      end)
+    end)
+  end,
+}
+
 local default_engines = {
   asymptote = asymptote,
   dot       = graphviz,
@@ -298,6 +322,7 @@ local default_engines = {
   plantuml  = plantuml,
   tikz      = tikz,
   cetz      = cetz,
+  d2        = d2,
 }
 
 --

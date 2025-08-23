@@ -1,0 +1,10 @@
+input-files: ['test/input-d2.md']
+filters:
+  - diagram.lua
+to: html
+metadata:
+  pagetitle: D2 diagram
+  diagram:
+    cache: false
+variables:
+  document-css: false
