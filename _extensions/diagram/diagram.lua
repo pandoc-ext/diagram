@@ -305,9 +305,18 @@ local d2 = {
         local infile = 'diagram.d2'
         local outfile = 'diagram.' .. file_extension
 
+        args = {}
+
+        table.insert(args, '--bundle')
+        table.insert(args, '--pad=0')
+        table.insert(args, '--scale=1')
+
+        table.insert(args, infile)
+        table.insert(args, outfile)
+
         write_file(infile, code)
 
-        pipe(self.execpath or 'd2', {infile, outfile}, '')
+        pipe(self.execpath or 'd2', args, '')
 
         return read_file(outfile), mime_type
       end)
