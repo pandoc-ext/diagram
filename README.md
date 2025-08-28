@@ -231,6 +231,43 @@ diagram:
 ---
 ```
 
+#### Mermaid
+
+The Mermaid engine accepts various options corresponding to
+a subset of the options that the `mmdc` command can take:
+
+- `theme`: passes its value to `--theme`
+- `background-color`: passes its value to `--backgroundColor`
+- `config-file`: passes its value to `--configFile`
+- `css-file`: passes its value to `--cssFile`
+- `scale`: passes its value to `--scale`
+- `puppeteer-config-file`: passes its value to `--puppeteerConfigFile`
+- `icon-packs`: passes its value to `--iconPacks`
+
+For more in-depth information on the meaning and format of every
+option, use `mmdc --help`.
+
+*Note* that for options that need to receive a file (e.g. `config-file`), relative paths can be used.
+However they will be *relative to the working directory used when calling the `pandoc`
+executable*, not to the directory of the file that contains the metadata block.
+
+Example:
+
+``` yaml
+---
+diagram:
+  engine:
+    mermaid:
+      theme: forest
+      background-color: white
+      config-file: mermaidConfig.json
+      css-file: cssFile.css
+      scale: 1
+      puppeteer-config-file: puppeteerConfig.json
+      icon-packs: "@iconify-json/logos"
+---
+```
+
 Security
 --------
 

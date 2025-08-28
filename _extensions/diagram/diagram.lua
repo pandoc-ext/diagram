@@ -152,32 +152,44 @@ local mermaid = {
     local mime_type = self.mime_type or 'image/svg+xml'
     local file_extension = extension_for_mimetype[mime_type]
     return with_temporary_directory("diagram", function (tmpdir)
-      return with_working_directory(tmpdir, function ()
-        local infile = 'diagram.mmd'
-        local outfile = 'diagram.' .. file_extension
-        local args = {"--pdfFit", "--input", infile, "--output", outfile}
-        if self.opt then
-          if self.opt.theme then
-            table.insert(args, '--theme' .. stringify(self.opt.theme))
-            table.insert(args, stringify(self.opt.cssFile))
-          end
-          if self.opt.configFile then
-            table.insert(args, '--configFile')
-            table.insert(args, stringify(self.opt.configFile))
-          end
-          if self.opt.cssFile then
-            table.insert(args, '--cssFile' .. stringify(self.opt.cssFile))
-            table.insert(args, stringify(self.opt.cssFile))
-          end
-          if self.opt.puppeteerConfigFile then
-            table.insert(args, '--puppeteerConfigFile')
-            table.insert(args, stringify(self.opt.puppeteerConfigFile))
-          end
+      local infile = tmpdir .. '/diagram.mmd'
+      local outfile = tmpdir .. '/diagram.' .. file_extension
+	  --- Configure options for mmdc based on engine options
+      local args = {'--pdfFit', '--input', infile, '--output', outfile}
+	  setmetatable(args, {__index = {insert = table.insert}})
+      if self.opt then
+        if self.opt['theme'] then
+          args:insert('--theme')
+          args:insert(stringify(self.opt['theme']))
         end
-        write_file(infile, code)
-        pipe(self.execpath or 'mmdc', args,'')
-        return read_file(outfile), mime_type
-      end)
+        if self.opt['background-color'] then
+          args:insert('--backgroundColor')
+          args:insert(stringify(self.opt['background-color']))
+        end
+        if self.opt['config-file'] then
+          args:insert('--configFile')
+          args:insert(stringify(self.opt['config-file']))
+        end
+        if self.opt['css-file'] then
+          args:insert('--cssFile')
+          args:insert(stringify(self.opt['css-file']))
+        end
+        if self.opt['scale'] then
+          args:insert('--scale')
+          args:insert(stringify(self.opt['scale']))
+        end
+        if self.opt['puppeteer-config-file'] then
+          args:insert('--puppeteerConfigFile')
+          args:insert(stringify(self.opt['puppeteer-config-file']))
+        end
+        if self.opt['icon-packs'] then
+          args:insert('--iconPacks')
+          args:insert(stringify(self.opt['icon-packs']))
+        end
+      end
+      write_file(infile, code)
+      pipe(self.execpath or 'mmdc', args, '')
+      return read_file(outfile), mime_type
     end)
   end,
 }
