@@ -180,9 +180,6 @@ jobs:
     container:
       image: ghcr.io/quarto-dev/quarto:latest
 
-    env:
-      D2_BIN: $HOME/go/bin/d2
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -191,8 +188,8 @@ jobs:
         run: |
           apt-get -q --no-allow-insecure-repositories update && \
           apt-get install --no-install-recommends --assume-yes \
-            ca-certificates make go \
-          go install oss.terrastruct.com/d2@latest
+            ca-certificates curl make && \
+          curl -fsSL https://d2lang.com/install.sh | sh -s --
 
       - name: Render
         run: make PANDOC=/opt/quarto/bin/tools/x86_64/pandoc test-d2
