@@ -173,6 +173,27 @@ jobs:
       - name: Render
         run: make PANDOC=/opt/quarto/bin/tools/x86_64/pandoc test-cetz
 
+  D2:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+    container:
+      image: ghcr.io/quarto-dev/quarto:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          apt-get -q --no-allow-insecure-repositories update && \
+          apt-get install --no-install-recommends --assume-yes \
+            ca-certificates curl make && \
+          curl -fsSL https://d2lang.com/install.sh | sh -s --
+
+      - name: Render
+        run: make PANDOC=/opt/quarto/bin/tools/x86_64/pandoc test-d2
+
   Quarto:
     runs-on: ubuntu-latest
     strategy:

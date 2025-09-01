@@ -4,7 +4,7 @@ Diagram Generator
 This Lua filter is used to create figures from code blocks: images
 are generated from the code with the help of external programs.
 The filter processes diagram code for Asymptote, Graphviz,
-Mermaid, PlantUML, and Ti*k*Z.
+Mermaid, PlantUML, Ti*k*Z, and D2.
 
 
 Usage
@@ -103,6 +103,7 @@ that can be used to specify a specific executable.
 | [PlantUML]  | `plantuml`        | `plantuml` | `PLANTUML_BIN`  |
 | [Ti*k*Z]    | `tikz`            | `pdflatex` | `PDFLATEX_BIN`  |
 | [cetz]      | `cetz`            | `typst`    | `TYPST_BIN`     |
+| [D2]        | `d2`              | `d2`       | `D2_BIN`        |
 
 ### Other diagram engines
 
@@ -115,6 +116,7 @@ The filter can be extended with local packages; see
 [PlantUML]: https://plantuml.com/
 [Ti*k*Z]: https://github.com/pgf-tikz/pgf
 [Cetz]: https://github.com/cetz-package/cetz
+[D2]: https://d2lang.com/
 
 Figure options
 --------------
