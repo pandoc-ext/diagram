@@ -152,8 +152,8 @@ local mermaid = {
     local mime_type = self.mime_type or 'image/svg+xml'
     local file_extension = extension_for_mimetype[mime_type]
     return with_temporary_directory("diagram", function (tmpdir)
-      local infile = tmpdir .. '/diagram.mmd'
-      local outfile = tmpdir .. '/diagram.' .. file_extension
+      local infile = pandoc.path.join({tmpdir, 'diagram.mmd'})
+      local outfile = pandoc.path.join({tmpdir, 'diagram.' .. file_extension})
       --- Configure options for mmdc based on engine options
       local args = List{'--pdfFit', '--input', infile, '--output', outfile}
       if self.opt then
