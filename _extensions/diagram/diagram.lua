@@ -154,37 +154,23 @@ local mermaid = {
     return with_temporary_directory("diagram", function (tmpdir)
       local infile = tmpdir .. '/diagram.mmd'
       local outfile = tmpdir .. '/diagram.' .. file_extension
-	  --- Configure options for mmdc based on engine options
-      local args = {'--pdfFit', '--input', infile, '--output', outfile}
-	  setmetatable(args, {__index = {insert = table.insert}})
+      --- Configure options for mmdc based on engine options
+      local args = List{'--pdfFit', '--input', infile, '--output', outfile}
       if self.opt then
-        if self.opt['theme'] then
-          args:insert('--theme')
-          args:insert(stringify(self.opt['theme']))
-        end
-        if self.opt['background-color'] then
-          args:insert('--backgroundColor')
-          args:insert(stringify(self.opt['background-color']))
-        end
-        if self.opt['config-file'] then
-          args:insert('--configFile')
-          args:insert(stringify(self.opt['config-file']))
-        end
-        if self.opt['css-file'] then
-          args:insert('--cssFile')
-          args:insert(stringify(self.opt['css-file']))
-        end
-        if self.opt['scale'] then
-          args:insert('--scale')
-          args:insert(stringify(self.opt['scale']))
-        end
-        if self.opt['puppeteer-config-file'] then
-          args:insert('--puppeteerConfigFile')
-          args:insert(stringify(self.opt['puppeteer-config-file']))
-        end
-        if self.opt['icon-packs'] then
-          args:insert('--iconPacks')
-          args:insert(stringify(self.opt['icon-packs']))
+        local options = {
+          ['theme'] = '--theme',
+          ['background-color'] = '--backgroundColor',
+          ['config-file'] = '--configFile',
+          ['css-file'] = '--cssFile',
+          ['scale'] = '--scale',
+          ['puppeteer-config-file'] = '--puppeteerConfigFile',
+          ['icon-packs'] = '--iconPacks',
+        }
+        for opt, cliopt in pairs(options) do
+          if self.opt[opt] then
+            args:insert(cliopt)
+            args:insert(stringify(self.opt[opt]))
+          end
         end
       end
       write_file(infile, code)
