@@ -307,6 +307,15 @@ local d2 = {
 
         args = {'--bundle', '--pad=0', '--scale=1'}
 
+        d2_user_opts = {
+          'layout',
+        }
+        for _, d2_user_opt in pairs(d2_user_opts) do
+          if user_opts[d2_user_opt] then
+            table.insert(args, '--' .. d2_user_opt .. '=' .. user_opts[d2_user_opt])
+          end
+        end
+
         table.insert(args, infile)
         table.insert(args, outfile)
 
