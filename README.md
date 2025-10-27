@@ -255,21 +255,22 @@ that the configs cannot be overwritten by the document.
 # file: diagram-filter.yaml
 filters: ['diagram.lua']
 metadata:
-  engine:
-    # enable dot/GraphViz and PlantUML with default options
-    dot: true
-    plantuml: true
+  diagram:
+    engine:
+      # enable dot/GraphViz and PlantUML with default options
+      dot: true
+      plantuml: true
 
-    # disable processing of asymptote and Mermaid diagrams
-    asymptote: false
-    mermaid: false
+      # disable processing of asymptote and Mermaid diagrams
+      asymptote: false
+      mermaid: false
 
-    # Use LuaLaTeX to compile TikZ, define headers
-    tikz:
-      execpath: lualatex
-      additional-packages: |
-        \usepackage{adjustbox}
-        \usetikzlibrary{arrows, shapes}
+      # Use LuaLaTeX to compile TikZ, define headers
+      tikz:
+        execpath: lualatex
+        additional-packages: |
+          \usepackage{adjustbox}
+          \usetikzlibrary{arrows, shapes}
 ```
 
 Usage:
