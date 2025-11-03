@@ -27,6 +27,10 @@ local List   = require 'pandoc.List'
 local stringify = utils.stringify
 local with_temporary_directory = system.with_temporary_directory
 local with_working_directory = system.with_working_directory
+local inspect = require 'inspect'
+-- local dbg = require 'debugger'
+
+-- dbg.auto_where = 5
 
 --- Returns a filter-specific directory in which cache files can be
 --- stored, or nil if no such directory is available.
@@ -296,7 +300,10 @@ local d2 = {
   line_comment_start = '#',
   mime_types = mime_types_set{'png', 'svg'},
 
-  compile = function (self, code, user_opts)
+  -- user_opts is a poor variable name.
+  -- It contains _all_ unified properties, such as the
+  -- compile function itself and mime data.
+  compile = function (self, code, user_opts, user_args)
     return with_temporary_directory('diagram', function (tmpdir)
       return with_working_directory(tmpdir, function ()
         -- D2 format identifiers correspond to common file extensions.
@@ -305,23 +312,45 @@ local d2 = {
         local infile = 'diagram.d2'
         local outfile = 'diagram.' .. file_extension
 
-        args = {'--bundle', '--pad=0', '--scale=1'}
-
-        d2_user_opts = {
-          'layout',
+        -- TODO: Maybe they should be skipped if _any_
+        -- special user args are given?
+        local args = {
+          ["--bundle"] = {}, ["--pad"] = 0, ["--scale"] = 1
         }
-        for _, d2_user_opt in pairs(d2_user_opts) do
-          if user_opts[d2_user_opt] then
-            table.insert(args, '--' .. d2_user_opt .. '=' .. user_opts[d2_user_opt])
+
+        -- TODO: Discuss if this style makes sense
+        for key, val in pairs(user_args) do
+          args[key] = val
+        end
+
+        local rendered_args = {}
+        for key, val in pairs(args) do
+          -- Allow rendering _empty_ attribute AND
+          -- flags, while still ensuring that common key values
+          -- can be overwritten by later values.
+          if type(val) == "table" and next(val) == nil then
+            table.insert(rendered_args, ("%s"):format(key))
+          elseif val == "" then
+            table.insert(rendered_args, ("%s="):format(key))
+          else
+            table.insert(rendered_args, ("%s=%s"):format(key, val))
           end
         end
 
-        table.insert(args, infile)
-        table.insert(args, outfile)
+        -- TODO: Should end with `--` to improve security.
+        table.insert(rendered_args, infile)
+        table.insert(rendered_args, outfile)
 
         write_file(infile, code)
 
-        pipe(self.execpath or 'd2', args, '')
+        print(inspect(rendered_args))
+
+        -- TODO: What should happen if execpath contains any custom
+        -- options? I personally would argue that `execpath` should
+        -- simply not allow passing "global" options at all.
+        -- Rather, a custom `args` keyword should be used.
+        -- But this may break user code.
+        pipe(self.execpath or 'd2', rendered_args, '')
 
         return read_file(outfile), mime_type
       end)
@@ -465,13 +494,31 @@ end
 
 local function properties_from_code (code, comment_start)
   local props = {}
-  local pattern = comment_start:gsub('%p', '%%%1') .. '| ' ..
-    '([-_%w]+): ([^\n]*)\n'
+  -- TODO: I would prefer to allow no spaces between the | and the argument
+  -- simply because I dislike spaces to carry "special" meaning. Though we
+  -- can remove it again. Here, the only important one is that the space
+  -- after `:` is optional since we need to be able to encode "empty" values.
+  local pattern = comment_start:gsub('%p', '%%%1') .. '|%s*' ..
+    '([-_%w]+):%s?([^\n]*)\n'
   for key, value in code:gmatch(pattern) do
     if key == 'fig-cap' then
       props['caption'] = value
     else
       props[key] = value
+    end
+  end
+  -- TODO: Discuss how we should encode `flag` options such as
+  -- `--bundle`. Here, we matching all rows
+  -- with the special comment style and the `args` prefix
+  -- and store those that do not contain
+  -- `:` as this indicates that it is a key-value options.
+  -- If we do not filter by the `args` prefix, then it would crash later
+  -- in the call chain as it would be added to the `image_attr` option.
+  local flag_pattern = comment_start:gsub('%p', '%%%1') .. '|%s*' ..
+    '(args[^\n]*)\n'
+  for val in code:gmatch(flag_pattern) do
+    if not (val):find(":") then
+      props[val] = {}
     end
   end
   return props
@@ -491,6 +538,7 @@ local function diagram_options (cb, comment_start)
   local filename
   local image_attr = {}
   local user_opt = {}
+  local user_args = {}
 
   for attr_name, value in pairs(attribs) do
     if attr_name == 'alt' then
@@ -516,11 +564,32 @@ local function diagram_options (cb, comment_start)
       elseif prefix == 'opt' then
         user_opt[key] = value
       else
-        -- Use as image attribute
-        image_attr[attr_name] = value
+        -- TODO: Check if we allow reading user arguments
+        -- TODO: Consider writing a single pattern after agreeing
+        -- on how the keys should be extracted.
+        local args_key = attr_name:match '^args(.*)'
+        if args_key then
+          user_args[args_key] = value
+        else
+          -- Use as image attribute
+          image_attr[attr_name] = value
+        end
       end
     end
   end
+
+  -- TODO: Discuss if it would confuse the user that
+  -- flags and classes cannot be "interleaved" as attributes
+  -- and classes are parsed independently from one another by pandoc.
+  for _, cls in ipairs(cb.classes) do
+    local arg = cls:match('^args(.*)$')
+    if arg then
+      user_args[arg] = {}
+    end
+  end
+
+
+  -- dbg()
 
   return {
     ['alt'] = alt or
@@ -531,6 +600,7 @@ local function diagram_options (cb, comment_start)
     ['filename'] = filename,
     ['image-attr'] = image_attr,
     ['opt'] = user_opt,
+    ['args'] = user_args,
   }
 end
 
@@ -595,7 +665,7 @@ local function code_to_figure (conf)
       -- No cached image; call the converter
       local success
       success, imgdata, imgtype =
-        pcall(engine.compile, engine, block.text, dgr_opt.opt)
+        pcall(engine.compile, engine, block.text, dgr_opt.opt, dgr_opt.args)
 
       -- Bail if an error occurred; imgdata contains the error message
       -- when that happens.
@@ -632,6 +702,7 @@ local function code_to_figure (conf)
 
     -- Create the image object.
     local image = pandoc.Image(dgr_opt.alt, fname, "", dgr_opt['image-attr'])
+
 
     -- Create a figure if the diagram has a caption; otherwise return
     -- just the image.
