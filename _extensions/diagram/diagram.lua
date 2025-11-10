@@ -152,17 +152,30 @@ local mermaid = {
     local mime_type = self.mime_type or 'image/svg+xml'
     local file_extension = extension_for_mimetype[mime_type]
     return with_temporary_directory("diagram", function (tmpdir)
-      return with_working_directory(tmpdir, function ()
-        local infile = 'diagram.mmd'
-        local outfile = 'diagram.' .. file_extension
-        write_file(infile, code)
-        pipe(
-          self.execpath or 'mmdc',
-          {"--pdfFit", "--input", infile, "--output", outfile},
-          ''
-        )
-        return read_file(outfile), mime_type
-      end)
+      local infile = pandoc.path.join({tmpdir, 'diagram.mmd'})
+      local outfile = pandoc.path.join({tmpdir, 'diagram.' .. file_extension})
+      --- Configure options for mmdc based on engine options
+      local args = List{'--pdfFit', '--input', infile, '--output', outfile}
+      if self.opt then
+        local options = {
+          ['theme'] = '--theme',
+          ['background-color'] = '--backgroundColor',
+          ['config-file'] = '--configFile',
+          ['css-file'] = '--cssFile',
+          ['scale'] = '--scale',
+          ['puppeteer-config-file'] = '--puppeteerConfigFile',
+          ['icon-packs'] = '--iconPacks',
+        }
+        for opt, cliopt in pairs(options) do
+          if self.opt[opt] then
+            args:insert(cliopt)
+            args:insert(stringify(self.opt[opt]))
+          end
+        end
+      end
+      write_file(infile, code)
+      pipe(self.execpath or 'mmdc', args, '')
+      return read_file(outfile), mime_type
     end)
   end,
 }
