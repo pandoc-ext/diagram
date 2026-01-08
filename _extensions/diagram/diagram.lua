@@ -391,8 +391,8 @@ local function get_engine (name, engopts, format)
     -- engine is disabled
     return nil
   elseif engopts == true then
-    -- use default options
-    return engine
+    -- use default options, but still run through normal configuration
+    engopts = {}
   end
 
   local execpath = engopts.execpath or os.getenv(name:upper() .. '_BIN')
