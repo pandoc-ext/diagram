@@ -233,6 +233,55 @@ diagram:
 ---
 ```
 
+#### Mermaid
+
+By default this engine calls `mmdc` (mermaid-cli), which requires a
+Chromium/Puppeteer install and can fail in sandboxed or restricted
+environments that block Chromium's multi-process startup.
+
+The `execpath` option can be used to swap in
+[`mmdr`](https://github.com/1jehuang/mermaid-rs-renderer), a pure-Rust
+Mermaid renderer with no browser dependency. `mmdr`'s `--input`/`--output`
+flags match `mmdc`'s, but it does not accept `--pdfFit` and has no native
+PDF output, so a small wrapper script bridges the two:
+
+``` bash
+#!/usr/bin/env bash
+# mmdr-wrapper.sh
+set -euo pipefail
+input="" output=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --pdfFit) shift ;;
+    --input) input="$2"; shift 2 ;;
+    --output) output="$2"; shift 2 ;;
+    *) shift ;;
+  esac
+done
+case "$output" in
+  *.png) exec mmdr --input "$input" --output "$output" --outputFormat png ;;
+  *.pdf)
+    svg="${output%.pdf}.svg"
+    mmdr --input "$input" --output "$svg" --outputFormat svg
+    rsvg-convert --format=pdf --output="$output" "$svg"
+    rm -f "$svg"
+    ;;
+  *) exec mmdr --input "$input" --output "$output" --outputFormat svg ;;
+esac
+```
+
+``` yaml
+---
+diagram:
+  engine:
+    mermaid:
+      execpath: /path/to/mmdr-wrapper.sh
+---
+```
+
+`rsvg-convert` (from librsvg) is required for PDF output, since `mmdr`
+only emits SVG/PNG directly.
+
 Security
 --------
 
