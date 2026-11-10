@@ -38,7 +38,7 @@ djot code will not set the `filename` attribute properly:
 `````` djot
 {filename="my-graph"}
 ``` =tkiz
-% DON'T use the filename attribute on code blocks
+% DON'T use attributes on raw blocks
 ...
 ``````
 
