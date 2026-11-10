@@ -656,7 +656,7 @@ return setmetatable(
       local conf = configure(doc.meta, FORMAT)
       return doc:walk {
         CodeBlock = block_to_figure(conf, "CodeBlock"),
-		RawBlock = block_to_figure(conf, "RawBlock"),
+        RawBlock = block_to_figure(conf, "RawBlock"),
       }
     end
   }},
