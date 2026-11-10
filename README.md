@@ -30,6 +30,18 @@ line option.
 
     pandoc --lua-filter diagram.lua ...
 
+#### Notes on using raw blocks
+
+Raw blocks in pandoc cannot have attributes, meaning the following
+djot code will not set the `filename` attribute properly:
+
+`````` djot
+{filename="my-graph"}
+``` =tkiz
+% DON'T use the filename attribute on code blocks
+...
+``````
+
 ### Quarto
 
 Users of Quarto can install this filter as an extension with

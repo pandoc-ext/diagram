@@ -482,6 +482,7 @@ local function diagram_options (cb, comment_start, block_type)
     and properties_from_code(cb.text, comment_start)
     or {}
   if block_type == "CodeBlock" then
+    -- RawBlock nodes do not have attributes
     for key, value in pairs(cb.attributes) do
       attribs[key] = value
     end
