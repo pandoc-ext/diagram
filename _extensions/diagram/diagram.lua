@@ -477,12 +477,14 @@ local function properties_from_code (code, comment_start)
   return props
 end
 
-local function diagram_options (cb, comment_start)
+local function diagram_options (cb, comment_start, block_type)
   local attribs = comment_start
     and properties_from_code(cb.text, comment_start)
     or {}
-  for key, value in pairs(cb.attributes) do
-    attribs[key] = value
+  if block_type == "CodeBlock" then
+    for key, value in pairs(cb.attributes) do
+      attribs[key] = value
+    end
   end
 
   local alt
@@ -558,12 +560,15 @@ local function cache_image (codeblock, imgdata, mimetype)
   write_file(imgpath, imgdata)
 end
 
--- Executes each document's code block to find matching code blocks:
-local function code_to_figure (conf)
+-- Executes each document's code or raw block to find matching code blocks:
+local function block_to_figure (conf, block_type)
   return function (block)
     -- Check if a converter exists for this block. If not, return the block
     -- unchanged.
-    local diagram_type = block.classes[1]
+    local diagram_type = block_type == "RawBlock"
+      and block.format
+      or block.classes[1]
+
     if not diagram_type then
       return nil
     end
@@ -574,7 +579,7 @@ local function code_to_figure (conf)
     end
 
     -- Unified properties.
-    local dgr_opt = diagram_options(block, engine.line_comment_start)
+    local dgr_opt = diagram_options(block, engine.line_comment_start, block_type)
     for optname, value in pairs(engine.opt or {}) do
       dgr_opt.opt[optname] = dgr_opt.opt[optname] or value
     end
@@ -650,7 +655,8 @@ return setmetatable(
     Pandoc = function (doc)
       local conf = configure(doc.meta, FORMAT)
       return doc:walk {
-        CodeBlock = code_to_figure(conf),
+        CodeBlock = block_to_figure(conf, "CodeBlock"),
+		RawBlock = block_to_figure(conf, "RawBlock"),
       }
     end
   }},
