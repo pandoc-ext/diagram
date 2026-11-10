@@ -1,7 +1,7 @@
 Diagram Generator
 =================
 
-This Lua filter is used to create figures from code blocks: images
+This Lua filter is used to create figures from code/raw blocks: images
 are generated from the code with the help of external programs.
 The filter processes diagram code for Asymptote, Graphviz,
 Mermaid, PlantUML, Ti*k*Z, and D2.
@@ -29,6 +29,18 @@ Pass the filter to pandoc via the `--lua-filter` (or `-L`) command
 line option.
 
     pandoc --lua-filter diagram.lua ...
+
+#### Notes on using raw blocks
+
+Raw blocks in pandoc cannot have attributes, meaning the following
+djot code will not set the `filename` attribute properly:
+
+`````` djot
+{filename="my-graph"}
+``` =tkiz
+% DON'T use attributes on raw blocks
+...
+``````
 
 ### Quarto
 
@@ -90,20 +102,20 @@ Diagram types
 -------------
 
 The table below lists the supported diagram drawing systems, the
-class that must be used for the system, and the main executable
+class or format that must be used for the system, and the main executable
 that the filter calls to generate an image from the code. The
 *environment variables* column lists the names of env variables
 that can be used to specify a specific executable.
 
-| System      | code block class  | executable | env variable    |
-|-------------|-------------------|------------|-----------------|
-| [Asymptote] | `asymptote`       | `asy`      | `ASYMPTOTE_BIN` |
-| [GraphViz]  | `dot`             | `dot`      | `DOT_BIN`       |
-| [Mermaid]   | `mermaid`         | `mmdc`     | `MERMAID_BIN`   |
-| [PlantUML]  | `plantuml`        | `plantuml` | `PLANTUML_BIN`  |
-| [Ti*k*Z]    | `tikz`            | `pdflatex` | `PDFLATEX_BIN`  |
-| [cetz]      | `cetz`            | `typst`    | `TYPST_BIN`     |
-| [D2]        | `d2`              | `d2`       | `D2_BIN`        |
+| System      | code block class / raw block format | executable | env variable    |
+|-------------|-------------------------------------|------------|-----------------|
+| [Asymptote] | `asymptote`                         | `asy`      | `ASYMPTOTE_BIN` |
+| [GraphViz]  | `dot`                               | `dot`      | `DOT_BIN`       |
+| [Mermaid]   | `mermaid`                           | `mmdc`     | `MERMAID_BIN`   |
+| [PlantUML]  | `plantuml`                          | `plantuml` | `PLANTUML_BIN`  |
+| [Ti*k*Z]    | `tikz`                              | `pdflatex` | `PDFLATEX_BIN`  |
+| [cetz]      | `cetz`                              | `typst`    | `TYPST_BIN`     |
+| [D2]        | `d2`                                | `d2`       | `D2_BIN`        |
 
 ### Other diagram engines
 
