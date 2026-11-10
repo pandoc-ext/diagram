@@ -1,5 +1,5 @@
 --[[
-diagram – create images and figures from code blocks.
+diagram – create images and figures from code/raw blocks.
 
 See copyright notice in file LICENSE.
 ]]
@@ -560,7 +560,7 @@ local function cache_image (codeblock, imgdata, mimetype)
   write_file(imgpath, imgdata)
 end
 
--- Executes each document's code or raw block to find matching code blocks:
+-- Executes each document's code/raw block to find matching code/raw blocks:
 local function block_to_figure (conf, block_type)
   return function (block)
     -- Check if a converter exists for this block. If not, return the block
